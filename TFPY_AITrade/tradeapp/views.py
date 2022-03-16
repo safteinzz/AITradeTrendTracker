@@ -11,8 +11,10 @@ def home_view(request):
 def markets_view(request):
     return render(request, 'tradeapp/markets.html', {})
 
-def symbol_view(request, sbl):     
-    return render(request, 'tradeapp/symbol.html', {'sbl':sbl})
+def symbol_view(request, sbl):
+    ticketData = si.get_data(sbl) #si falla tiene que dar 404
+    if ticketData:        
+        return render(request, 'tradeapp/symbol.html', {'sbl':sbl})
 
 
 
