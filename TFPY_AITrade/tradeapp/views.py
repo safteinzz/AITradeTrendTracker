@@ -1,6 +1,7 @@
 from yahoo_fin import stock_info as si
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView
+from .utils import get_dataYahoo
 
 
 # Create your views here.
@@ -12,9 +13,9 @@ def markets_view(request):
     return render(request, 'tradeapp/markets.html', {})
 
 def symbol_view(request, sbl):
-    ticketData = si.get_data(sbl) #si falla tiene que dar 404
-    if ticketData:        
-        return render(request, 'tradeapp/symbol.html', {'sbl':sbl})
+    ticketData = get_dataYahoo(sbl) #si falla tiene que dar 404    https://docs.djangoproject.com/en/4.0/ref/urls/
+    print(ticketData)
+    return render(request, 'tradeapp/symbol.html', {'sbl':sbl})
 
 
 

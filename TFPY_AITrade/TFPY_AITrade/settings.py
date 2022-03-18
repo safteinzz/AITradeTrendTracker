@@ -23,8 +23,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-o*8486*mjq(!(9eig*pow96r)=7dow9#i+5nvw_6(#3=olw8vv'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-ALLOWED_HOSTS = ['*'] #https://www.youtube.com/watch?v=_LxJlF79_jU
+DEBUG = True
+ALLOWED_HOSTS = ['*'] #https://www.youtube.com/watch?v=_LxJlF79_jU https://stackoverflow.com/questions/49465281/how-to-return-404-page-intentionally-in-django
 
 
 # Application definition
