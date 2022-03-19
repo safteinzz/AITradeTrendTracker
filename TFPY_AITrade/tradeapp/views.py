@@ -13,8 +13,8 @@ def markets_view(request):
     return render(request, 'tradeapp/markets.html', {})
 
 def symbol_view(request, sbl):
-    ticketData = get_dataYahoo(sbl) #si falla tiene que dar 404    https://docs.djangoproject.com/en/4.0/ref/urls/
-    print(ticketData)
+    tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True) #si falla tiene que dar 404    https://docs.djangoproject.com/en/4.0/ref/urls/
+    print(tickerData)
     return render(request, 'tradeapp/symbol.html', {'sbl':sbl})
 
 
