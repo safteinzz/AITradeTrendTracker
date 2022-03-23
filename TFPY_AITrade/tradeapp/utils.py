@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from datetime import date
 
-def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0):
+def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None):
     """Funcion para extraer los datos del ticker de la libreria de yahoo_fin
 
     Args:
@@ -22,38 +22,41 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
     Returns:
         pd.DataFrame: Data of the seleccted ticker.
     """
-    # <!------------------- Extraccion ---------------------->
-    # Get date range
-    endDateRange = date.today()
-    if period != 3:
-        if period == 0:
-            startDateRange = endDateRange - pd.DateOffset(days=7)
-        if period == 1:
-            startDateRange = endDateRange - pd.DateOffset(months=1)
-        if period == 2:
-            startDateRange = endDateRange - pd.DateOffset(years=1)
-        
-    # Comprobación tipos
+    # <!------------------- Extraction ---------------------->
+    # http://theautomatic.net/yahoo_fin-documentation/#methods
+    #           
+    # Type check
     if isinstance(ticker, str):
+        # Get date range 
+        endDateRange = date.today()
         if period != 3:
+            if period == 0:
+                startDateRange = endDateRange - pd.DateOffset(days=7)
+            if period == 1:
+                startDateRange = endDateRange - pd.DateOffset(months=1)
+            if period == 2:
+                startDateRange = endDateRange - pd.DateOffset(years=1)
             df = si.get_data(ticker, start_date = startDateRange , end_date = endDateRange)
         else:
-            df = si.get_data(ticker)
+            df = si.get_data(ticker, interval)
     elif isinstance(ticker, pd.DataFrame):
         df = ticker
     else:
         raise TypeError("Tipo no es 'str' o 'pd.DataFrame'")
     
-    # <!------------------- Manipulacion ---------------------->
-    # Crear columna data en lugar de usarlo como index
+    # <!------------------- Manipulation ---------------------->
+    # Create column date instead of using it as index
     if "date" not in df.columns:
         df["date"] = df.index
+        # Reset index
+        df = df.reset_index(drop=True)
+        df['date'] = df['date'].dt.strftime('%Y-%m-%d')
 
     # Drop Ticker
     if dropTicker:
         del df["ticker"]
 
-    # Escalar valores 0-1 (mejorar rendimiento)
+    # Scale values 0-1 (better perfomance)
     if scaled:
         column_scaler = {}
         for columnName in df.columns:
@@ -64,17 +67,12 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
             else:
                 pass
 
-    # Hay que agregar datos como noticias, deberia de sacar positividad de las noticias medias en referencia al tema para agregarlo como positividad de las noticias como linea adicional
+    # Add news (deberia de sacar positividad de las noticias medias en referencia al tema para agregarlo como positividad de las noticias como linea adicional)
     if news:
         pass
 
-    # Mezclar datos para mejor confidence
+    # Shuffle data
     if shuffle:
         pass
 
     return df
-
-
-
-
-

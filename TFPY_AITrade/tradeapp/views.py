@@ -7,15 +7,23 @@ from .utils import get_dataYahoo
 # Create your views here.
 def home_view(request):
     hello = 'hello world from the view'
-    return render(request, 'tradeapp/home.html', {'h':hello}) #lo ultimo es un diccionario que le llega al html
+    return render(request, 'tradeapp/home.html', {'h':hello})
 
 def markets_view(request):
     return render(request, 'tradeapp/markets.html', {})
 
 def symbol_view(request, sbl):
-    tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True) #si falla tiene que dar 404    https://docs.djangoproject.com/en/4.0/ref/urls/
+    tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 3)
+    # Swap rows to columns
+    # tickerData = tickerData.transpose()
+    # # JS doesn't read pandas so we need to make it a JSON object
+    # tickerData = tickerData.to_json()
     print(tickerData)
-    return render(request, 'tradeapp/symbol.html', {'sbl':sbl})
+    dictPar = {
+        'sbl':sbl,
+        'tickerData':tickerData,
+    }
+    return render(request, 'tradeapp/symbol.html', dictPar)
 
 
 
