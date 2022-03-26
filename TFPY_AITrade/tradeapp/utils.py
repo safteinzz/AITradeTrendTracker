@@ -6,7 +6,7 @@ import pandas as pd
 from datetime import date
 
 def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None):
-    """Funcion para extraer los datos del ticker de la libreria de yahoo_fin
+    """_summary_
 
     Args:
         ticker (string_or_pd.DataFrame): Selected ticker for data extraction
@@ -15,12 +15,13 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
         news (bool, optional): Adquire news for training. Defaults to True.
         shuffle (bool, optional): Shuffle the data or not. Defaults to True.
         period (int, optional): Period of data search (0 week, 1 month, 2 year, 3 all). Defaults to 1.
+        interval (_type_, optional): Interval of the data (weekly, monthly). Defaults to None.
 
     Raises:
-        TypeError: Throws error if is the type is wrong.
+        TypeError: _description_
 
     Returns:
-        pd.DataFrame: Data of the seleccted ticker.
+        _type_: _description_
     """
     # <!------------------- Extraction ---------------------->
     # http://theautomatic.net/yahoo_fin-documentation/#methods
@@ -31,7 +32,7 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
         endDateRange = date.today()
         if period != 3:
             if period == 0:
-                startDateRange = endDateRange - pd.DateOffset(days=7)
+                startDateRange = endDateRange - pd.DateOffset(days=8)
             if period == 1:
                 startDateRange = endDateRange - pd.DateOffset(months=1)
             if period == 2:
@@ -52,6 +53,9 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
         df = df.reset_index(drop=True)
         df['date'] = df['date'].dt.strftime('%Y-%m-%d')
 
+    # Delete duplicated rows (yahoo fin sometimes gives data of he same day twice)
+    df = df.drop_duplicates(subset=["date"], keep=False)
+    
     # Drop Ticker
     if dropTicker:
         del df["ticker"]

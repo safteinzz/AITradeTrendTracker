@@ -12,16 +12,28 @@ def home_view(request):
 def markets_view(request):
     return render(request, 'tradeapp/markets.html', {})
 
-def symbol_view(request, sbl):
-    tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 3)
-    # Swap rows to columns
-    # tickerData = tickerData.transpose()
-    # # JS doesn't read pandas so we need to make it a JSON object
-    # tickerData = tickerData.to_json()
-    print(tickerData)
+def symbol_view(request, sbl, pd = 'weekly'):
+    range = 0
+    if pd == 'monthly':
+        range = 1
+    elif pd == 'yearly':
+        range = 2
+    elif pd == 'full':
+        range = 3
+
+    tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 0)
+    # Fix for lightweightcharts lib
+    tickerData = tickerData.rename(columns={"date":"time"})
+    # tickerData = tickerData.drop([tickerData.index[2957]])
+    print("------------------------------------------")
+    print (tickerData)
+    print("------------------------------------------")
+    # Save as dict for passing to JS
+    data = tickerData.to_dict(orient='records')
+    # print(data)
     dictPar = {
         'sbl':sbl,
-        'tickerData':tickerData,
+        'data':data
     }
     return render(request, 'tradeapp/symbol.html', dictPar)
 

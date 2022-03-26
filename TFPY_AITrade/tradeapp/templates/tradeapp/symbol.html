@@ -23,6 +23,7 @@ Market {{sbl}}
 				<a class="dropdown-item disabled" href="#">Week</a>
 				<a class="dropdown-item" href="#">Month</a>
 				<a class="dropdown-item" href="#">Year</a>
+				<a class="dropdown-item" href="#">Full</a>
 			</div>
 		</div>
 	</div>
@@ -64,11 +65,10 @@ https://adamj.eu/tech/2020/02/18/safely-including-data-for-javascript-in-a-djang
 https://www.youtube.com/watch?v=3KPW9VMyBHA
 https://tradingview.github.io/lightweight-charts/docs
 {% endcomment %}
-{% comment %}
-
-{% endcomment %}
 <script type="text/javascript">
+	console.log({{data|safe}});
 	const chartElement = document.getElementById('TVChart');
+
 	var chart = LightweightCharts.createChart(chartElement, {
 		width: 1540,
 		height: 600,
@@ -92,9 +92,8 @@ https://tradingview.github.io/lightweight-charts/docs
 			},
 		},
 	});
-
-	var candlestickSeries = chart.addCandlestickSeries();
-
+	var candlestickSeries = chart.addCandlestickSeries(
+	);
 	var volumeSeries = chart.addHistogramSeries({
 		color: '#26a69a',
 		priceFormat: {
@@ -106,25 +105,14 @@ https://tradingview.github.io/lightweight-charts/docs
 			bottom: 0,
 		},
 	});
-	
-	candlestickSeries.setData([{% for l in tickerData.itertuples %}
-	{
-		time: '{{ l.date }}',
-		open: {{ l.open }},
-		high: {{ l.high }},
-		low: {{ l.low }},
-		close: {{ l.close }}
-	},
-	{% endfor %}
-	]);
 
-	volumeSeries.setData([{% for l in tickerData.itertuples %}
-	{ 
-		time: '{{ l.date }}',
+	candlestickSeries.setData({{data|safe}});
+	volumeSeries.setData([{% for l in data %}
+	{
+		time: '{{ l.time }}',
 		value: {{ l.volume }},
 		color: {% if l.close < l.open %} 'rgba(255,82,82, 0.8)' {% else %} 'rgba(0, 150, 136, 0.8)' {% endif %}
 	},
-	{% endfor %}
-	]);
+	{% endfor %}]);
 </script>
 {% endblock scripts %}
