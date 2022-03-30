@@ -70,9 +70,10 @@ https://www.youtube.com/watch?v=3KPW9VMyBHA
 https://tradingview.github.io/lightweight-charts/docs
 {% endcomment %}
 <script type="text/javascript">
-	function chartSetter(candleData, volumeData, candlestickSeries, volumeSeries) {
+	function chartSetter(chart, candleData, volumeData, candlestickSeries, volumeSeries) {
 		candlestickSeries.setData(candleData);
 		volumeSeries.setData(volumeData);
+		chart.timeScale().fitContent();
 	}
 
 	var chart = LightweightCharts.createChart(document.getElementById('TVChart'), {
@@ -112,7 +113,7 @@ https://tradingview.github.io/lightweight-charts/docs
 		},
 	});
 
-	chartSetter(candleData = {{candleData|safe}}, volumeData = {{volumeData|safe}}, candlestickSeries, volumeSeries);
+	chartSetter(chart, candleData = {{candleData|safe}}, volumeData = {{volumeData|safe}}, candlestickSeries, volumeSeries);
 </script>
 <script type="text/javascript"> //https://stackoverflow.com/questions/45906858/update-dom-without-reloading-the-page-in-django
 $("#dateRangeSelector a").click(function (){
@@ -128,7 +129,7 @@ $("#dateRangeSelector a").click(function (){
         },
         dataType: 'json',
         success: function (data) {
-        	chartSetter(data.candleData, data.volumeData, candlestickSeries, volumeSeries);
+        	chartSetter(chart, data.candleData, data.volumeData, candlestickSeries, volumeSeries);
 			$('#actualSelectiondropdownMenuButton').text(data.actualSelection);
 			var counter = 0;
 			$('.selectionItem').each( function( index, element ){
