@@ -75,9 +75,9 @@ https://tradingview.github.io/lightweight-charts/docs
 		volumeSeries.setData(volumeData);
 		chart.timeScale().fitContent();
 	}
-
-	var chart = LightweightCharts.createChart(document.getElementById('TVChart'), {
-		width: 1540,
+	parent = document.getElementById('TVChart')
+	var chart = LightweightCharts.createChart(parent, {
+		width: parent.offsetWidth,
 		height: 600,
 		rightPriceScale: {
 			scaleMargins: {
@@ -114,6 +114,14 @@ https://tradingview.github.io/lightweight-charts/docs
 	});
 
 	chartSetter(chart, candleData = {{candleData|safe}}, volumeData = {{volumeData|safe}}, candlestickSeries, volumeSeries);
+
+	// Responsive chart https://stackoverflow.com/questions/57898720/how-to-create-responsive-tradingview-lightweight-chart
+	new ResizeObserver(entries => {
+		if (entries.length === 0 || entries[0].target !== parent) { return; }
+		const newRect = entries[0].contentRect;
+		chart.applyOptions({ height: newRect.height, width: newRect.width });
+	  }).observe(parent);
+
 </script>
 <script type="text/javascript"> //https://stackoverflow.com/questions/45906858/update-dom-without-reloading-the-page-in-django
 $("#dateRangeSelector a").click(function (){
