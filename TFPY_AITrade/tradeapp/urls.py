@@ -7,13 +7,15 @@ from .views import (
     symbol_view,
     # MarketListView,
     # SymbolDetailView,
+    answer
 )
 
 app_name = 'tradeapp'
 
 urlpatterns = [
     path('', home_view, name='home'),
-    path('markets/', markets_view, name='markets'), # path('markets/', MarketListView.as_view(), name='market'),
-    path('markets/<sbl>/', symbol_view, name='symbolWeek'), # path('markets/<pk>/', SymbolDetailView.as_view(), name='symbol'),  
+    path('markets/', markets_view, name='markets'),
+    path('markets/<sbl>/', symbol_view, name='symbolWeek'), 
     path('markets/<sbl>/<pd>/', symbol_view, name='symbolRest'),
+    path('ajax/get_response/', answer, name='get_response'),
 ]

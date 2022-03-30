@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from datetime import date
 
+
 def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None):
     """_summary_
 
@@ -32,10 +33,10 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
         endDateRange = date.today()
         if period != 3:
             if period == 0:
-                startDateRange = endDateRange - pd.DateOffset(days=8)
-            if period == 1:
                 startDateRange = endDateRange - pd.DateOffset(months=1)
-            if period == 2:
+            elif period == 1:
+                startDateRange = endDateRange - pd.DateOffset(months=6)
+            elif period == 2:
                 startDateRange = endDateRange - pd.DateOffset(years=1)
             df = si.get_data(ticker, start_date = startDateRange , end_date = endDateRange)
         else:
@@ -53,9 +54,9 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
         df = df.reset_index(drop=True)
         df['date'] = df['date'].dt.strftime('%Y-%m-%d')
 
-    # Delete duplicated rows (yahoo fin sometimes gives data of he same day twice)
+    # Delete duplicated rows (yahoo fin sometimes gives data of the same day twice)
     df = df.drop_duplicates(subset=["date"], keep=False)
-    
+
     # Drop Ticker
     if dropTicker:
         del df["ticker"]
@@ -80,3 +81,18 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
         pass
 
     return df
+
+
+def LWCFix(df):
+    # Fix for lightweightcharts lib
+    df = df.rename(columns={"date":"time"})
+    df = df.rename(columns={"volume":"value"})
+    # Create color column for volume series
+    df['color'] = np.where(df['open'] < df['close'] ,'rgba(0, 150, 136, 0.8)' , 'rgba(255,82,82, 0.8)')
+    # Split the dataframe into 2 dataframes, 1 with volume data, and other with the rest of the data
+    candleData = df.drop(columns=['value', 'adjclose', 'color'])
+    volumeData = df.filter(['value', 'time', 'color'])
+    # Save as dict for passing to JS
+    candleData = candleData.to_dict(orient='records')
+    volumeData = volumeData.to_dict(orient='records')
+    return candleData, volumeData

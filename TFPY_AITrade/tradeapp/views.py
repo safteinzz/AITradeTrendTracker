@@ -1,8 +1,11 @@
+from django.http import JsonResponse
 from yahoo_fin import stock_info as si
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView
-from .utils import get_dataYahoo
+from .utils import get_dataYahoo, LWCFix
 
+import numpy as np
+import pandas as pd
 
 # Create your views here.
 def home_view(request):
@@ -12,36 +15,57 @@ def home_view(request):
 def markets_view(request):
     return render(request, 'tradeapp/markets.html', {})
 
-def symbol_view(request, sbl, pd = 'weekly'):
-    range = 0
-    if pd == 'monthly':
-        range = 1
-    elif pd == 'yearly':
-        range = 2
-    elif pd == 'full':
-        range = 3
-
+def symbol_view(request, sbl):
+    # Extract data
     tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 0)
-    # Fix for lightweightcharts lib
-    tickerData = tickerData.rename(columns={"date":"time"})
-    # tickerData = tickerData.drop([tickerData.index[2957]])
-    print("------------------------------------------")
-    print (tickerData)
-    print("------------------------------------------")
-    # Save as dict for passing to JS
-    data = tickerData.to_dict(orient='records')
-    # print(data)
-    dictPar = {
+    # LightweightCharts Fix
+    candleData, volumeData = LWCFix(tickerData)
+
+    actualSeletion = 'Last month'
+    otherSelection = [
+        "Last 6 months",
+        "Last year",
+        "Full"
+    ]
+
+    data = {
         'sbl':sbl,
-        'data':data
+        'candleData':candleData,
+        'volumeData':volumeData,
+        'actualSelection':actualSeletion,
+        'otherSelection':otherSelection
     }
-    return render(request, 'tradeapp/symbol.html', dictPar)
+    return render(request, 'tradeapp/symbol.html', data)
 
+def answer(request):    
+    sbl = request.GET.get('sbl')
+    period = request.GET.get('period')
+    actualSeletion = period
+    if (period == 'Last month'):
+        period = 0
+    elif (period == 'Last 6 months'):
+        period = 1
+    elif (period == 'Last year'):
+        period = 2
+    else:
+        period = 3
 
+    # Create a dataframe with all the options the filter out the current one
+    otherSelection = np.array(['Last month', 'Last 6 months', 'Last year', 'Full'])
+    otherSelection = np.delete(otherSelection, np.argwhere(otherSelection == actualSeletion))
+    otherSelection = pd.DataFrame(data = otherSelection, columns = ['value'])
+    otherSelection = otherSelection.to_dict(orient='records')
 
+    print(otherSelection)
+    # Extract data
+    tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = period)
+    # LightweightCharts Fix
+    candleData, volumeData = LWCFix(tickerData)
 
-# class MarketListView(ListView):
-#     template_name = 'tradeapp/markets.html'
-
-# class SymbolDetailView(DetailView):
-#     template_name = 'tradeapp/symbol.html'
+    data = {
+        'candleData':candleData,
+        'volumeData':volumeData,
+        'actualSelection':actualSeletion,
+        'otherSelection':otherSelection
+    }
+    return JsonResponse(data)
