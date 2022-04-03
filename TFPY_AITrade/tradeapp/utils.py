@@ -1,13 +1,13 @@
-# https://www.youtube.com/watch?v=jrT6NiM46jk matplotlib (no necesario en este caso)
+# https://www.youtube.com/watch?v=jrT6NiM46jk matplotlib (not needed but maybe usefull in the future)
 from yahoo_fin import stock_info as si
 from sklearn import preprocessing
 import numpy as np
 import pandas as pd
 from datetime import date
-
+from .crawler import Crawler
 
 def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None):
-    """_summary_
+    """Method for the data extraction of the selected ticker with modified results based on different parameters
 
     Args:
         ticker (string_or_pd.DataFrame): Selected ticker for data extraction
@@ -19,10 +19,10 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
         interval (_type_, optional): Interval of the data (weekly, monthly). Defaults to None.
 
     Raises:
-        TypeError: _description_
+        TypeError: The type of the ticker is not string
 
     Returns:
-        _type_: _description_
+        pd.DataFrame: Dataframe with the info of the ticker selected with the parameters selected
     """
     # <!------------------- Extraction ---------------------->
     # http://theautomatic.net/yahoo_fin-documentation/#methods
@@ -44,7 +44,7 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
     elif isinstance(ticker, pd.DataFrame):
         df = ticker
     else:
-        raise TypeError("Tipo no es 'str' o 'pd.DataFrame'")
+        raise TypeError("Type is not 'str' or 'pd.DataFrame'")
     
     # <!------------------- Manipulation ---------------------->
     # Create column date instead of using it as index
@@ -84,6 +84,14 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
 
 
 def LWCFix(df):
+    """Method to make the yahoo fin data from the "get_dataYahoo" method easier and faster to put in the chart
+
+    Args:
+        df (pd.DataFrame): The dataframe where info is going to get generated
+
+    Returns:
+        pd.DataFrame: Dataframes with the data splitted on two variables one for candle chart and the other for the histogram
+    """
     # Fix for lightweightcharts lib
     df = df.rename(columns={"date":"time"})
     df = df.rename(columns={"volume":"value"})
