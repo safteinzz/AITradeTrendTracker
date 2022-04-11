@@ -4,7 +4,11 @@ from sklearn import preprocessing
 import numpy as np
 import pandas as pd
 from datetime import date
-from .crawler import Crawler
+from GoogleNews import GoogleNews
+from urllib.parse import urlparse
+import re
+
+from .models import New
 
 def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None):
     """Method for the data extraction of the selected ticker with modified results based on different parameters
@@ -82,8 +86,7 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
 
     return df
 
-
-def LWCFix(df):
+def lWCFix(df):
     """Method to make the yahoo fin data from the "get_dataYahoo" method easier and faster to put in the chart
 
     Args:
@@ -104,3 +107,22 @@ def LWCFix(df):
     candleData = candleData.to_dict(orient='records')
     volumeData = volumeData.to_dict(orient='records')
     return candleData, volumeData
+
+def newsExtract(sbl, provider = False):
+    # Check latest news last 3 days and every 3 days
+    dateToday = date.today()
+    dateDaysAgo = dateToday - pd.DateOffset(days=3)
+    news = New.objects.filter(date__gt=dateDaysAgo)
+
+    if len(news) < 3:
+        googlenews = GoogleNews(start='04/08/2022',end='04/11/2022')
+        googlenews.search(sbl)
+        listNews = googlenews.results()
+        for index in range(3):
+            urlParsed = urlparse(listNews[index]['link'])
+            provider = re.sub('www.', '',urlParsed.netloc)
+            newNew = New(title = listNews[index]['title'], date = listNews[index]['datetime'], desc = listNews[index]['desc'], link = listNews[index]['link'], provider = provider)
+            newNew.save()
+
+    listReturn = New.objects.filter(pk__gte=New.objects.count() - 3)
+    return listReturn

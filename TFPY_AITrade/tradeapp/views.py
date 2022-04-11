@@ -1,11 +1,14 @@
+from typing import NewType
 from django.http import JsonResponse
 from yahoo_fin import stock_info as si
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView
-from .utils import get_dataYahoo, LWCFix
+from .utils import get_dataYahoo, lWCFix, newsExtract
+from .models import New
 
 import numpy as np
 import pandas as pd
+from datetime import date
 
 # Create your views here.
 def home_view(request):
@@ -19,7 +22,7 @@ def symbol_view(request, sbl):
     # Extract data
     tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 0)
     # LightweightCharts Fix
-    candleData, volumeData = LWCFix(tickerData)
+    candleData, volumeData = lWCFix(tickerData)
 
     actualSeletion = 'Last month'
     otherSelection = [
@@ -27,13 +30,14 @@ def symbol_view(request, sbl):
         "Last year",
         "Full"
     ]
-
+    latestNews = newsExtract(sbl)  
     data = {
-        'sbl':sbl,
-        'candleData':candleData,
-        'volumeData':volumeData,
-        'actualSelection':actualSeletion,
-        'otherSelection':otherSelection
+        'sbl' : sbl,
+        'candleData' : candleData,
+        'volumeData' : volumeData,
+        'actualSelection' : actualSeletion,
+        'otherSelection' : otherSelection,
+        'latestNews' : latestNews
     }
     return render(request, 'tradeapp/symbol.html', data)
 
@@ -60,7 +64,7 @@ def answer(request):
     # Extract data
     tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = period)
     # LightweightCharts Fix
-    candleData, volumeData = LWCFix(tickerData)
+    candleData, volumeData = lWCFix(tickerData)
 
     data = {
         'candleData':candleData,

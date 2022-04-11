@@ -39,11 +39,12 @@ Market {{sbl}}
 
 {% comment %} News {% endcomment %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-	<h1 id="symbol" class="h2">News</h1>
+	<h1 id="symbol" class="h2">Latest news</h1>
 </div>
 
 {% comment %} News block {% endcomment %}
 <div class="row">
+	{% for new in latestNews %}
 	<div class="col-md-4">
 		<div class="card p-3 mb-2">
 			<div class="d-flex justify-content-between">
@@ -51,31 +52,32 @@ Market {{sbl}}
 					<div class="icon"> <i class="fa-solid fa-newspaper"></i> </div>
 					<div class="ms-2 c-details">
 						<h6 class="mb-0">
-							new provider
+							{{new.provider}}
 						</h6> 
 						<span>
-							new date
+							{{new.date}}
 						</span>
 					</div>
 				</div>
 				<div class="badge"> 
 					<span>
-						new type
+						Relevant
 					</span>
 				</div>
 			</div>
 			<div class="mt-5">
 				<h3 class="heading">
-					new tittle
+					{{new.title}}
 				</h3>
 				<div class="mt-5">
 					<div class="mt-3">
-						resumed new content
+						{{new.desc}}
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
+	{% endfor %}
 </div>
 <!--
 <div class="table-responsive">
