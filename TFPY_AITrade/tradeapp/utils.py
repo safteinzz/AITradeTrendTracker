@@ -109,7 +109,15 @@ def lWCFix(df):
     return candleData, volumeData
 
 def newsExtract(sbl, provider = False):
-    # Check latest news last 3 days and every 3 days
+    """Method for extracting news from a ticker and save or load them to/from the database as well as returning them
+
+    Args:
+        sbl (_type_): symbol name
+        provider (bool, optional): We only need provider when showing news, when getting news for prediction the provider is not needed. Defaults to False.
+
+    Returns:
+        list: list of the lastest 3 news
+    """
     dateToday = date.today()
     dateDaysAgo = dateToday - pd.DateOffset(days=3)
     news = New.objects.filter(date__gt=dateDaysAgo)
@@ -121,8 +129,10 @@ def newsExtract(sbl, provider = False):
         for index in range(3):
             urlParsed = urlparse(listNews[index]['link'])
             provider = re.sub('www.', '',urlParsed.netloc)
+            provider = re.sub('\..*', '',provider)
             newNew = New(title = listNews[index]['title'], date = listNews[index]['datetime'], desc = listNews[index]['desc'], link = listNews[index]['link'], provider = provider)
             newNew.save()
 
     listReturn = New.objects.filter(pk__gte=New.objects.count() - 3)
     return listReturn
+

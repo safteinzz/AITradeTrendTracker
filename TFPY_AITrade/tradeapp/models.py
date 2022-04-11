@@ -6,7 +6,7 @@ from django.db import models
 # Create your models here.
 class New(models.Model):
     title = models.CharField(max_length=100)
-    date = models.DateField()
+    date = models.DateField(default=None, blank=True, null=True)
     desc = models.CharField(max_length=400)
     link = models.CharField(max_length=200)
     provider = models.CharField(max_length=50)
