@@ -44,3 +44,9 @@ body {
     justify-content: center;
     align-items: center;
 }
+
+a {
+    cursor: pointer;
+}
+
+.tagify__tag + .tagify__input::before{ opacity:0; }

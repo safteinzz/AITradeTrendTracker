@@ -121,9 +121,12 @@ def newsExtract(sbl, provider = False):
     dateToday = date.today()
     dateDaysAgo = dateToday - pd.DateOffset(days=3)
     news = New.objects.filter(date__gt=dateDaysAgo)
+    
+    startRange = dateToday.strftime('%m-%d-%Y')
+    endRange = dateDaysAgo.strftime('%m-%d-%Y')
 
     if len(news) < 3:
-        googlenews = GoogleNews(start='04/08/2022',end='04/11/2022')
+        googlenews = GoogleNews(start=startRange,end=endRange)
         googlenews.search(sbl)
         listNews = googlenews.results()
         for index in range(3):

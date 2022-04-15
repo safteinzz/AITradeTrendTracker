@@ -11,7 +11,11 @@ Market {{sbl}}
 	<h1 id="symbol" class="h2">{{sbl}}</h1>
 	<div class="btn-toolbar mb-2 mb-md-0">
 		<div class="btn-group me-2">
-			<button type="button" class="btn btn-sm btn-outline-secondary">
+			{% comment %} hay que meter un if check user admin {% endcomment %}
+			<button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#collapseModelCreationSettings" aria-expanded="false" aria-controls="collapseModelCreationSettings">
+				Create model
+			</button>
+			<button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#collapsePredictionSettings" aria-expanded="false" aria-controls="collapsePredictionSettings">
 				Prediction
 			</button>
 		</div>
@@ -21,7 +25,7 @@ Market {{sbl}}
 		</div>
 		<div class="dropdown">
 			<button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="actualSelectiondropdownMenuButton"
-				data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+				data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
 				<i class="fa-solid fa-calendar-days pe-1"></i>
 				<span id='actualSelectionText'>{{actualSelection}}</span>
 			</button>
@@ -34,15 +38,213 @@ Market {{sbl}}
 	</div>
 </div>
 
+
+{% comment %} Admin model creation form {% endcomment %}
+<form class="collapse" id="collapseModelCreationSettings">
+	<div class="row">
+		<div class="col-sm-3">
+
+			<div class="form-group pb-3">
+				<label for="predictInputModel" class="fs-5">Model</label>
+				<input type="email" class="form-control" id="inputEmail4" placeholder="Model name">
+			</div>
+
+			<div class="form-group pb-3">
+				<label for="predictInputModel" class="fs-5">Description</label>
+				<textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+			</div>
+
+			<div class="form-group pb-2">
+				<div class="row align-items-center">
+					<div class="col-sm-2">
+						<label for="predictRange" class="fs-5">Range</label>
+					</div>
+					<div class="col-sm">
+						<select id="predictRange" class="form-control form-select">
+							<option selected disabled>Choose ...</option>
+							<option>1 Month</option>
+							<option>6 Months</option>
+							<option>1 Year</option>
+						</select>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<div class="row align-items-center">
+					<div class="col-sm">
+						<input type="email" class="form-control" id="inputEmail4" placeholder="Range Start">
+					</div>
+					-
+					<div class="col-sm">
+						<input type="email" class="form-control" id="inputEmail4" placeholder="Range End">
+					</div>
+				</div>
+			</div>
+
+			<hr />
+
+			<div class="form-group">
+				<label for="predictInputModel" class="fs-5">Benchmark</label>
+				<select id="predictInputModel" class="form-control form-select">
+					<option selected>{{sbl}}</option>
+					<option>...</option>
+				</select>
+			</div>
+		</div>
+		<div class="col-sm-1"></div>
+		<div class="col-sm-3">
+
+
+
+
+
+			<div class="form-group pb-3">
+				<label for="predictInputModel" class="fs-5">Algorithm</label>
+				<select id="predictInputModel" class="form-control form-select">
+					<option selected disabled>Choose ...</option>
+					<option>...</option>
+				</select>
+			</div>
+
+
+
+
+
+
+
+			
+
+
+			<div class="form-group pb-3">
+
+				<input class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
+					data-bs-target="#collapseEnsemble" aria-expanded="false" aria-controls="collapseEnsemble" />
+				<label class="form-check-label fs-5 " for="flexCheckDefault">Ensemble learning</label>
+
+				<div id="collapseEnsemble" class="collapse">
+					<select id="inputEnsemble" class="form-control form-select">
+						<option selected disabled>Choose ...</option>
+						<option>Bagging</option>
+						<option>Boosting</option>
+						<option>Stacking</option>
+					</select>
+				</div>
+
+			</div>
+
+
+
+
+
+
+
+
+			<div class="form-group ">
+				<input class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
+					data-bs-target="#collapseNews" aria-expanded="false" aria-controls="collapseNews" />
+				<label class="form-check-label fs-5" for="flexCheckDefault">News</label>
+				
+				<div id="collapseNews" class="collapse">
+					<input id="inputNews" type="email" class="form-control inputCell" placeholder="Banned Websites" />
+				</div>
+
+			</div>
+
+
+
+
+
+
+
+
+
+		</div>
+
+		<div class="col-sm-1"></div>
+
+		<div class="col-sm-3">
+
+
+			<div class="form-group">
+				<label class="form-check-label fs-5 pb-2" for="flexCheckDefault">Indicators</label>
+
+
+				<div class="form-check form-switch">
+					<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
+					<label class="form-check-label" for="flexSwitchCheckDefault">Default switch checkbox input</label>
+				</div>
+
+				<div class="form-check form-switch">
+					<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
+					<label class="form-check-label" for="flexSwitchCheckDefault">Default switch checkbox input</label>
+				</div>
+
+				<div class="form-check form-switch">
+					<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
+					<label class="form-check-label" for="flexSwitchCheckDefault">Default switch checkbox input</label>
+				</div>
+			</div>
+
+
+		</div>
+	</div>
+</form>
+
+{% comment %} User prediccion form {% endcomment %}
+<form class="collapse" id="collapsePredictionSettings">
+	<div class="row">
+		<div class="col-sm-3">
+			<div class="form-group pb-3">
+			<label for="predictInputModel" class="fs-5">Model</label>
+			<select id="predictInputModel" class="form-control form-select">
+				<option selected>Choose...</option>
+				<option>...</option>
+			</select>
+			</div>
+
+			<div class="row align-items-center pb-3">
+				<div class="col-sm-2">
+					<label for="predictRange" class="fs-5">Range</label>
+				</div>
+				<div class="col-sm">
+					<select id="predictRange" class="form-control form-select">
+						<option selected>1 Month</option>
+						<option>6 Months</option>
+						<option>1 Year</option>
+					</select>
+				</div>
+			</div>
+
+			<div class="row align-items-center">
+				<div class="col-sm">
+					<input type="email" class="form-control" id="inputEmail4" placeholder="Range Start">
+				</div>
+				-
+				<div class="col-sm">
+					<input type="email" class="form-control" id="inputEmail4" placeholder="Range End">
+				</div>
+			</div>
+
+			<hr />
+
+			<label for="predictInputModel" class="fs-5">Benchmark</label>
+			<select id="predictInputModel" class="form-control form-select">
+				<option selected>{{sbl}}</option>
+				<option>...</option>
+			</select>
+
+		</div>
+	</div>
+</form>
+
 {% comment %} Chart {% endcomment %}
 <div class="my-4 w-100" id="TVChart" width="900" height="380"></div>
 
-{% comment %} News {% endcomment %}
+{% comment %} News block {% endcomment %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
 	<h1 id="symbol" class="h2">Latest news</h1>
 </div>
-
-{% comment %} News block {% endcomment %}
 <div class="row">
 	{% for new in latestNews %}
 	<div class="col-md-4">
@@ -81,30 +283,6 @@ Market {{sbl}}
 	</div>
 	{% endfor %}
 </div>
-<!--
-<div class="table-responsive">
-	<table class="table table-striped table-sm">
-		<thead>
-			<tr>
-				<th scope="col">#</th>
-				<th scope="col">Header</th>
-				<th scope="col">Header</th>
-				<th scope="col">Header</th>
-				<th scope="col">Header</th>
-			</tr>
-		</thead>
-		<tbody>
-			<tr>
-				<td>1,001</td>
-				<td>random</td>
-				<td>data</td>
-				<td>placeholder</td>
-				<td>text</td>
-			</tr>
-
-		</tbody>
-	</table>
-</div>-->
 {% endblock content %}
 
 {% block scripts %}
@@ -191,5 +369,7 @@ $("#dateRangeSelector a").click(function (){
         }
       });
 });
+
+inputTags(document.querySelector('.inputCell'), [],[]);
 </script>
 {% endblock scripts %}
