@@ -7,8 +7,10 @@ from datetime import date
 from GoogleNews import GoogleNews
 from urllib.parse import urlparse
 import re
+from talib import BBANDS
 
 from .models import New
+
 
 def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None):
     """Method for the data extraction of the selected ticker with modified results based on different parameters
@@ -119,7 +121,7 @@ def newsExtract(sbl, provider = False):
         list: list of the lastest 3 news
     """
     dateToday = date.today()
-    dateDaysAgo = dateToday - pd.DateOffset(days=3)
+    dateDaysAgo = dateToday - pd.DateOffset(days=7)
     news = New.objects.filter(date__gt=dateDaysAgo)
     
     startRange = dateToday.strftime('%m-%d-%Y')
@@ -139,3 +141,27 @@ def newsExtract(sbl, provider = False):
     listReturn = New.objects.filter(pk__gte=New.objects.count() - 3)
     return listReturn
 
+def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):
+    """https://mrjbq7.github.io/ta-lib/
+
+    Args:
+        df (_type_): _description_
+        BB (bool, optional): _description_. Defaults to False.
+        DEMA (bool, optional): _description_. Defaults to False.
+        RSI (bool, optional): _description_. Defaults to False.
+        MACD (bool, optional): _description_. Defaults to False.
+    """
+    if BB:
+        df['upperband'], df['middleband'], df['lowerband'] = BBANDS(df['close'], timeperiod=5, nbdevup=2, nbdevdn=2, matype=0)
+    
+
+    # Clean
+    df = df.dropna()
+    df = df.reset_index(drop=True)
+    
+
+
+
+        
+
+    

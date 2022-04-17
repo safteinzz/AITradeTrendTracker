@@ -45,39 +45,40 @@ Market {{sbl}}
 		<div class="col-sm-3">
 
 			<div class="form-group pb-3">
-				<label for="predictInputModel" class="fs-5">Model</label>
-				<input type="email" class="form-control" id="inputEmail4" placeholder="Model name">
+				<label for="creationInputModelName" class="fs-5">Model</label>
+				<input type="text" class="form-control" id="creationInputModelName" placeholder="Model name">
 			</div>
 
 			<div class="form-group pb-3">
-				<label for="predictInputModel" class="fs-5">Description</label>
-				<textarea class="form-control" id="exampleFormControlTextarea1" rows="3"></textarea>
+				<label for="creationInputModelDescription" class="fs-5">Description</label>
+				<textarea class="form-control" id="creationInputModelDescription" rows="3" placeholder="Model description"></textarea>
 			</div>
 
 			<div class="form-group pb-2">
 				<div class="row align-items-center">
 					<div class="col-sm-2">
-						<label for="predictRange" class="fs-5">Range</label>
+						<label for="creationInputRange" class="fs-5">Range</label>
 					</div>
 					<div class="col-sm">
-						<select id="predictRange" class="form-control form-select">
+						<select id="creationInputRange" class="form-control form-select">
 							<option selected disabled>Choose ...</option>
-							<option>1 Month</option>
-							<option>6 Months</option>
-							<option>1 Year</option>
+							<option>1 Month - Fastest</option>
+							<option>6 Months - Fast</option>
+							<option>1 Year - Slow</option>
+							<option>FULL - Slowest</option>
 						</select>
 					</div>
 				</div>
 			</div>
 
-			<div class="form-group">
+			<div id="creationInputRangeDiv" class="form-group">
 				<div class="row align-items-center">
 					<div class="col-sm">
-						<input type="email" class="form-control" id="inputEmail4" placeholder="Range Start">
+						<input type="date" class="form-control dateCell" id="creationInputIniRange" max="">
 					</div>
 					-
 					<div class="col-sm">
-						<input type="email" class="form-control" id="inputEmail4" placeholder="Range End">
+						<input type="date" class="form-control dateCell" id="creationInputEndRange" min="">
 					</div>
 				</div>
 			</div>
@@ -85,45 +86,41 @@ Market {{sbl}}
 			<hr />
 
 			<div class="form-group">
-				<label for="predictInputModel" class="fs-5">Benchmark</label>
-				<select id="predictInputModel" class="form-control form-select">
-					<option selected>{{sbl}}</option>
+				<label for="creationInputBenchmark" class="fs-5">Benchmark</label>
+				<select id="creationInputBenchmark" class="form-control form-select">
+					<option disabled selected>{{sbl}}</option>
 					<option>...</option>
 				</select>
 			</div>
 		</div>
+
+
+
+
 		<div class="col-sm-1"></div>
+
+
+
 		<div class="col-sm-3">
-
-
-
-
-
 			<div class="form-group pb-3">
-				<label for="predictInputModel" class="fs-5">Algorithm</label>
-				<select id="predictInputModel" class="form-control form-select">
+				<label for="creationInputAlgorithm" class="fs-5">Algorithm</label>
+				<select id="creationInputAlgorithm" class="form-control form-select">
 					<option selected disabled>Choose ...</option>
-					<option>...</option>
+					{% for algo in algorithms %}
+					<option>{{algo}}</option>
+					{% endfor %}
 				</select>
-			</div>
-
-
-
-
-
-
-
-			
+			</div>			
 
 
 			<div class="form-group pb-3">
 
-				<input class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
+				<input id="creationInputEnsembleCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
 					data-bs-target="#collapseEnsemble" aria-expanded="false" aria-controls="collapseEnsemble" />
-				<label class="form-check-label fs-5 " for="flexCheckDefault">Ensemble learning</label>
+				<label class="form-check-label fs-5 " for="creationInputEnsembleCheck">Ensemble learning</label>
 
 				<div id="collapseEnsemble" class="collapse">
-					<select id="inputEnsemble" class="form-control form-select">
+					<select id="creationInputEnsemble" class="form-control form-select">
 						<option selected disabled>Choose ...</option>
 						<option>Bagging</option>
 						<option>Boosting</option>
@@ -134,28 +131,16 @@ Market {{sbl}}
 			</div>
 
 
-
-
-
-
-
-
 			<div class="form-group ">
-				<input class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
+				<input id="creationInputNewsCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
 					data-bs-target="#collapseNews" aria-expanded="false" aria-controls="collapseNews" />
-				<label class="form-check-label fs-5" for="flexCheckDefault">News</label>
+				<label class="form-check-label fs-5" for="creationInputNewsCheck">News</label>
 				
 				<div id="collapseNews" class="collapse">
-					<input id="inputNews" type="email" class="form-control inputCell" placeholder="Banned Websites" />
+					<input id="creationInputNews" type="text" class="form-control inputCell" placeholder="Banned Websites" />
 				</div>
 
 			</div>
-
-
-
-
-
-
 
 
 
@@ -167,23 +152,16 @@ Market {{sbl}}
 
 
 			<div class="form-group">
-				<label class="form-check-label fs-5 pb-2" for="flexCheckDefault">Indicators</label>
+				<label class="form-check-label fs-5 pb-2">Indicators</label>
 
-
+				{% for indicator in indicators.itertuples %}
 				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
-					<label class="form-check-label" for="flexSwitchCheckDefault">Default switch checkbox input</label>
+					<input class="form-check-input" type="checkbox" id="creationInputIndicator{{ indicator.acronym }}">
+					<label class="form-check-label" for="creationInputIndicator{{ indicator.acronym }}">{{ indicator.full }}</label>
 				</div>
+				{% endfor %}
 
-				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
-					<label class="form-check-label" for="flexSwitchCheckDefault">Default switch checkbox input</label>
-				</div>
 
-				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault">
-					<label class="form-check-label" for="flexSwitchCheckDefault">Default switch checkbox input</label>
-				</div>
 			</div>
 
 
@@ -205,32 +183,36 @@ Market {{sbl}}
 
 			<div class="row align-items-center pb-3">
 				<div class="col-sm-2">
-					<label for="predictRange" class="fs-5">Range</label>
+					<label class="fs-5" for="predictInputRange">Range</label>
 				</div>
 				<div class="col-sm">
-					<select id="predictRange" class="form-control form-select">
-						<option selected>1 Month</option>
-						<option>6 Months</option>
-						<option>1 Year</option>
+					<select id="predictInputRange" class="form-control form-select">
+						<option selected disabled>Choose ...</option>
+						<option>1 Month - Fastest</option>
+						<option>6 Months - Fast</option>
+						<option>1 Year - Slow</option>
+						<option>FULL - Slowest</option>
 					</select>
 				</div>
 			</div>
 
-			<div class="row align-items-center">
-				<div class="col-sm">
-					<input type="email" class="form-control" id="inputEmail4" placeholder="Range Start">
-				</div>
-				-
-				<div class="col-sm">
-					<input type="email" class="form-control" id="inputEmail4" placeholder="Range End">
+			<div id="predictInputRangeDiv" class="form-group">
+				<div class="row align-items-center">
+					<div class="col-sm">
+						<input type="date" class="form-control" id="predictInputIniRange">
+					</div>
+					-
+					<div class="col-sm">
+						<input type="date" class="form-control" id="predictInputEndRange">
+					</div>
 				</div>
 			</div>
 
 			<hr />
 
-			<label for="predictInputModel" class="fs-5">Benchmark</label>
-			<select id="predictInputModel" class="form-control form-select">
-				<option selected>{{sbl}}</option>
+			<label for="predictInputBenchmark" class="fs-5">Benchmark</label>
+			<select id="predictInputBenchmark" class="form-control form-select">
+				<option disabled selected>{{sbl}}</option>
 				<option>...</option>
 			</select>
 
@@ -371,5 +353,20 @@ $("#dateRangeSelector a").click(function (){
 });
 
 inputTags(document.querySelector('.inputCell'), [],[]);
+
+
+{% comment %} 
+$("#theSelect").change(function() {
+    $("#someInput").val($(this).val());
+}); {% endcomment %}
+
+
+$("#creationInputRange").change(function(){
+	dateSelector($('#creationInputRangeDiv'),$("#creationInputRange option:selected"),$("#creationInputIniRange"),$("#creationInputEndRange"));
+});
+$("#predictInputRange").change(function(){
+	dateSelector($('#predictInputRangeDiv'),$("#predictInputRange option:selected"),$("#predictInputIniRange"),$("#predictInputEndRange"));
+});
+
 </script>
 {% endblock scripts %}

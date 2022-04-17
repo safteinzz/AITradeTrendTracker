@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from yahoo_fin import stock_info as si
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView
-from .utils import get_dataYahoo, lWCFix, newsExtract
+from .utils import get_dataYahoo, lWCFix, newsExtract, addIndicators
 from .models import New
 
 import numpy as np
@@ -21,24 +21,37 @@ def markets_view(request):
 def symbol_view(request, sbl):
     # Extract data
     tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 0)
+
     # LightweightCharts Fix
     candleData, volumeData = lWCFix(tickerData)
 
     actualSeletion = 'Last month'
+    
     otherSelection = [
         "Last 6 months",
         "Last year",
         "Full"
     ]
-    latestNews = newsExtract(sbl)  
+
+    latestNews = newsExtract(sbl)
+
+    indicators = pd.DataFrame()
+    indicators['full'] = ['Bollinger Bands', 'Double Exponential Moving Average', 'Relative Strength Index', 'Moving Average Convergence Divergence']
+    indicators['acronym'] = ['BB', 'DEMA', 'RSI','MACD']
+
+    algorithms = ['K-NN', 'SVC']
+
     data = {
         'sbl' : sbl,
         'candleData' : candleData,
         'volumeData' : volumeData,
         'actualSelection' : actualSeletion,
         'otherSelection' : otherSelection,
-        'latestNews' : latestNews
+        'latestNews' : latestNews,
+        'indicators' : indicators,
+        'algorithms' : algorithms
     }
+
     return render(request, 'tradeapp/symbol.html', data)
 
 def answer(request):    
