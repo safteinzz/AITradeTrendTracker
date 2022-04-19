@@ -12,7 +12,17 @@ from talib import BBANDS
 from .models import New
 
 
-def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None):
+def scalator(df):
+    column_scaler = {}
+    for columnName in df.columns:
+        if columnName != 'ticker' and columnName != 'date':
+            scaler = preprocessing.MinMaxScaler()
+            df[columnName] = scaler.fit_transform(np.expand_dims(df[columnName].values, axis=1))
+            column_scaler[columnName] = scaler
+        else:
+            pass
+
+def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None, rangeIni = False, rangeEnd = False):
     """Method for the data extraction of the selected ticker with modified results based on different parameters
 
     Args:
@@ -33,11 +43,11 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
     # <!------------------- Extraction ---------------------->
     # http://theautomatic.net/yahoo_fin-documentation/#methods
     #           
-    # Type check
     if isinstance(ticker, str):
-        # Get date range 
-        endDateRange = date.today()
-        if period != 3:
+        if rangeIni and rangeEnd:
+            df = si.get_data(ticker, start_date = rangeIni , end_date = rangeEnd)
+        elif period != 3:
+            endDateRange = date.today()
             if period == 0:
                 startDateRange = endDateRange - pd.DateOffset(months=1)
             elif period == 1:
@@ -69,14 +79,7 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
 
     # Scale values 0-1 (better perfomance)
     if scaled:
-        column_scaler = {}
-        for columnName in df.columns:
-            if columnName != 'ticker' and columnName != 'date':
-                scaler = preprocessing.MinMaxScaler()
-                df[columnName] = scaler.fit_transform(np.expand_dims(df[columnName].values, axis=1))
-                column_scaler[columnName] = scaler
-            else:
-                pass
+        scalator(df)
 
     # Add news (deberia de sacar positividad de las noticias medias en referencia al tema para agregarlo como positividad de las noticias como linea adicional)
     if news:
@@ -158,6 +161,7 @@ def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):
     # Clean
     df = df.dropna()
     df = df.reset_index(drop=True)
+    return df
     
 
 

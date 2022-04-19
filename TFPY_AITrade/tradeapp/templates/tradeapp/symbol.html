@@ -41,17 +41,19 @@ Market {{sbl}}
 
 {% comment %} Admin model creation form {% endcomment %}
 <form class="collapse" id="collapseModelCreationSettings">
+	{% csrf_token %}
+	<input type="hidden" name="formtype" value="formModelCreation">
 	<div class="row">
 		<div class="col-sm-3">
 
 			<div class="form-group pb-3">
 				<label for="creationInputModelName" class="fs-5">Model</label>
-				<input type="text" class="form-control" id="creationInputModelName" placeholder="Model name">
+				<input type="text" class="form-control" name="creationInputModelName" id="creationInputModelName" placeholder="Model name">
 			</div>
 
 			<div class="form-group pb-3">
 				<label for="creationInputModelDescription" class="fs-5">Description</label>
-				<textarea class="form-control" id="creationInputModelDescription" rows="3" placeholder="Model description"></textarea>
+				<textarea class="form-control" name="creationInputModelDescription" id="creationInputModelDescription" rows="3" placeholder="Model description"></textarea>
 			</div>
 
 			<div class="form-group pb-2">
@@ -70,7 +72,6 @@ Market {{sbl}}
 					</div>
 				</div>
 			</div>
-
 			<div id="creationInputRangeDiv" class="form-group">
 				<div class="row align-items-center">
 					<div class="col-sm">
@@ -87,97 +88,76 @@ Market {{sbl}}
 
 			<div class="form-group">
 				<label for="creationInputBenchmark" class="fs-5">Benchmark</label>
-				<select id="creationInputBenchmark" class="form-control form-select">
-					<option disabled selected>{{sbl}}</option>
-					<option>...</option>
+				<select name="creationInputBenchmark" id="creationInputBenchmark" class="form-control form-select">
+					<option value="{{sbl}}" selected>{{sbl}}</option>
 				</select>
 			</div>
 		</div>
-
-
-
-
 		<div class="col-sm-1"></div>
-
-
-
 		<div class="col-sm-3">
 			<div class="form-group pb-3">
 				<label for="creationInputAlgorithm" class="fs-5">Algorithm</label>
-				<select id="creationInputAlgorithm" class="form-control form-select">
+				<select name="creationInputAlgorithm" id="creationInputAlgorithm" class="form-control form-select">
 					<option selected disabled>Choose ...</option>
 					{% for algo in algorithms %}
-					<option>{{algo}}</option>
+					<option value="{{algo}}">{{algo}}</option>
 					{% endfor %}
 				</select>
 			</div>			
-
-
 			<div class="form-group pb-3">
 
-				<input id="creationInputEnsembleCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
+				<input name="creationInputEnsembleCheck" id="creationInputEnsembleCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
 					data-bs-target="#collapseEnsemble" aria-expanded="false" aria-controls="collapseEnsemble" />
 				<label class="form-check-label fs-5 " for="creationInputEnsembleCheck">Ensemble learning</label>
 
 				<div id="collapseEnsemble" class="collapse">
-					<select id="creationInputEnsemble" class="form-control form-select">
+					<select name="creationInputEnsemble" id="creationInputEnsemble" class="form-control form-select">
 						<option selected disabled>Choose ...</option>
-						<option>Bagging</option>
-						<option>Boosting</option>
-						<option>Stacking</option>
+						<option value="Bagging">Bagging</option>
+						<option value="Boosting">Boosting</option>
+						<option value="Stacking">Stacking</option>
 					</select>
 				</div>
 
 			</div>
-
-
 			<div class="form-group ">
-				<input id="creationInputNewsCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
+				<input name="creationInputNewsCheck" id="creationInputNewsCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
 					data-bs-target="#collapseNews" aria-expanded="false" aria-controls="collapseNews" />
-				<label class="form-check-label fs-5" for="creationInputNewsCheck">News</label>
-				
+				<label class="form-check-label fs-5" for="creationInputNewsCheck">News</label>			
 				<div id="collapseNews" class="collapse">
-					<input id="creationInputNews" type="text" class="form-control inputCell" placeholder="Banned Websites" />
+					<input name="creationInputNews" id="creationInputNews" type="text" class="form-control inputCell" placeholder="Banned Websites" />
 				</div>
 
 			</div>
-
-
-
 		</div>
-
 		<div class="col-sm-1"></div>
-
 		<div class="col-sm-3">
-
-
 			<div class="form-group">
 				<label class="form-check-label fs-5 pb-2">Indicators</label>
-
 				{% for indicator in indicators.itertuples %}
 				<div class="form-check form-switch">
-					<input class="form-check-input" type="checkbox" id="creationInputIndicator{{ indicator.acronym }}">
+					<input name="{{ indicator.acronym }}" class="form-check-input" type="checkbox" id="creationInputIndicator{{ indicator.acronym }}">
 					<label class="form-check-label" for="creationInputIndicator{{ indicator.acronym }}">{{ indicator.full }}</label>
 				</div>
 				{% endfor %}
-
-
 			</div>
-
-
 		</div>
 	</div>
+	
+	<input id="submitModelCreation" class="btn btn-primary w-100 my-4" type="submit" value="Create Model">
 </form>
 
 {% comment %} User prediccion form {% endcomment %}
-<form class="collapse" id="collapsePredictionSettings">
+<form class="collapse" id="collapsePredictionSettings" method="POST">
+	{% csrf_token %}
+	<input type="hidden" name="formtype" value="formPrediction">
 	<div class="row">
 		<div class="col-sm-3">
 			<div class="form-group pb-3">
 			<label for="predictInputModel" class="fs-5">Model</label>
-			<select id="predictInputModel" class="form-control form-select">
+			<select name="predictInputModel" id="predictInputModel" class="form-control form-select">
 				<option selected>Choose...</option>
-				<option>...</option>
+				<option value="...">...</option>
 			</select>
 			</div>
 
@@ -211,13 +191,14 @@ Market {{sbl}}
 			<hr />
 
 			<label for="predictInputBenchmark" class="fs-5">Benchmark</label>
-			<select id="predictInputBenchmark" class="form-control form-select">
-				<option disabled selected>{{sbl}}</option>
+			<select name="predictInputBenchmark" id="predictInputBenchmark" class="form-control form-select">
+				<option value="{{sbl}}" selected>{{sbl}}</option>
 				<option>...</option>
-			</select>
-
+			</select>			
+			<input class="btn btn-primary w-100 my-4" type="submit" value="Submit">
 		</div>
 	</div>
+	
 </form>
 
 {% comment %} Chart {% endcomment %}
@@ -352,13 +333,42 @@ $("#dateRangeSelector a").click(function (){
       });
 });
 
+var formData = new FormData();
+$("#submitModelCreation").click(function (){
+	formData.append('model', $('#creationInputModelName').val())
+	formData.append('description', $('#creationInputModelDescription').val())
+	formData.append('rangeIni', $('#predictInputIniRange').val())
+	formData.append('rangeEnd', $('#predictInputEndRange').val())
+	formData.append('benchmark', $( "#creationInputBenchmark option:selected" ).text())
+	formData.append('algorithm', $( "#creationInputAlgorithm option:selected" ).text())
+	formData.append('ensemble', $( "#creationInputEnsemble option:selected" ).text())
+	formData.append('news', $('#creationInputNews').val())
+
+	formData.append('action', 'create-model')
+	formData.append('csrfmiddlewaretoken', '{{ csrf_token }}')
+	
+	const endpoint = 'create-model/';
+	$.ajax({
+		type: "POST",
+        url: endpoint,
+        data: formData,
+		cache: false,
+		processData: false,
+		contentType: false,
+		enctype: 'multipart/form-data',
+        success: function (){
+			//alert('The mode!')
+		},
+		error: function(xhr, errmsg, err) {
+			console.log(xhr.status + ":" + xhr.responseText)
+		}
+      });
+});
+
+
+
+
 inputTags(document.querySelector('.inputCell'), [],[]);
-
-
-{% comment %} 
-$("#theSelect").change(function() {
-    $("#someInput").val($(this).val());
-}); {% endcomment %}
 
 
 $("#creationInputRange").change(function(){
@@ -367,6 +377,5 @@ $("#creationInputRange").change(function(){
 $("#predictInputRange").change(function(){
 	dateSelector($('#predictInputRangeDiv'),$("#predictInputRange option:selected"),$("#predictInputIniRange"),$("#predictInputEndRange"));
 });
-
 </script>
 {% endblock scripts %}

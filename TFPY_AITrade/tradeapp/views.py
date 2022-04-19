@@ -3,7 +3,9 @@ from django.http import JsonResponse
 from yahoo_fin import stock_info as si
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView
-from .utils import get_dataYahoo, lWCFix, newsExtract, addIndicators
+from django.http import HttpResponseRedirect
+from django.http import HttpResponse
+from .utils import scalator, get_dataYahoo, lWCFix, newsExtract, addIndicators
 from .models import New
 
 import numpy as np
@@ -19,6 +21,21 @@ def markets_view(request):
     return render(request, 'tradeapp/markets.html', {})
 
 def symbol_view(request, sbl):
+        # if request.POST.get('formtype') == 'formModelCreation':
+        #     print(request.POST.get('creationInputModelName'))
+        #     print(request.POST.get('creationInputModelDescription'))
+        #     print(request.POST.get('creationInputBenchmark'))
+        #     print(request.POST.get('creationInputAlgorithm'))
+        #     if request.POST.get('creationInputEnsembleCheck') == 'on':
+        #         print(request.POST.get('creationInputEnsemble'))
+        #     if request.POST.get('creationInputNewsCheck') == 'on':
+        #         print(request.POST.get('creationInputNews'))
+        # elif request.POST.get('formtype') == 'formPrediction':
+        #     print(request.POST.get('predictInputModel'))
+        #     print(request.POST.get('predictInputBenchmark'))
+
+        # return HttpResponseRedirect("/some/url/")
+
     # Extract data
     tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 0)
 
@@ -86,3 +103,16 @@ def answer(request):
         'otherSelection':otherSelection
     }
     return JsonResponse(data)
+
+def createModel(request, sbl):
+    if request.POST.get('action') == 'create-model':
+        # Data extraction
+        df = get_dataYahoo(ticker = request.POST.get('benchmark'), scaled = False, dropTicker = True, rangeIni = request.POST.get('rangeIni'), rangeEnd = request.POST.get('rangeEnd'))
+        # Add indicators
+        df = addIndicators(df, BB = True)
+        scalator(df)
+        print(df)
+        if(request.POST.get('news')):
+            print(request.POST.get('news'))
+
+    return HttpResponse('')
