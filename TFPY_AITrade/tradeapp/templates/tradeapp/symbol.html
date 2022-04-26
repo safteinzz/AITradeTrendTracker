@@ -335,17 +335,29 @@ $("#dateRangeSelector a").click(function (){
 
 var formData = new FormData();
 $("#submitModelCreation").click(function (){
-	formData.append('model', $('#creationInputModelName').val())
-	formData.append('description', $('#creationInputModelDescription').val())
-	formData.append('rangeIni', $('#predictInputIniRange').val())
-	formData.append('rangeEnd', $('#predictInputEndRange').val())
-	formData.append('benchmark', $( "#creationInputBenchmark option:selected" ).text())
-	formData.append('algorithm', $( "#creationInputAlgorithm option:selected" ).text())
-	formData.append('ensemble', $( "#creationInputEnsemble option:selected" ).text())
-	formData.append('news', $('#creationInputNews').val())
+	formData.append('model', $('#creationInputModelName').val());
+	formData.append('description', $('#creationInputModelDescription').val());
 
-	formData.append('action', 'create-model')
-	formData.append('csrfmiddlewaretoken', '{{ csrf_token }}')
+	myDate = new Date($('#creationInputIniRange').val());
+	formData.append('rangeIni',  $('#creationInputIniRange').val());
+	myDate = new Date($('#creationInputEndRange').val());
+	formData.append('rangeEnd',  $('#creationInputEndRange').val());
+	
+	
+	formData.append('rangeEnd',  $('#creationInputEndRange').val());
+	if ($('#creationInputEnsembleCheck').is(':checked')){
+		formData.append('ensemble', $("#creationInputEnsemble option:selected").text());
+	}
+	if ($('#creationInputNewsCheck').is(':checked')){
+		formData.append('news', 'True');
+		formData.append('blacklist', $('#creationInputNews').val());
+	}
+	formData.append('benchmark', $( "#creationInputBenchmark option:selected" ).text());
+	formData.append('algorithm', $( "#creationInputAlgorithm option:selected" ).text());
+	formData.append('ensemble', $( "#creationInputEnsemble option:selected" ).text());
+
+	formData.append('action', 'create-model');
+	formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 	
 	const endpoint = 'create-model/';
 	$.ajax({
@@ -357,7 +369,7 @@ $("#submitModelCreation").click(function (){
 		contentType: false,
 		enctype: 'multipart/form-data',
         success: function (){
-			//alert('The mode!')
+			alert('success!')
 		},
 		error: function(xhr, errmsg, err) {
 			console.log(xhr.status + ":" + xhr.responseText)

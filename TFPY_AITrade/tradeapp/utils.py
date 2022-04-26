@@ -1,9 +1,10 @@
 # https://www.youtube.com/watch?v=jrT6NiM46jk matplotlib (not needed but maybe usefull in the future)
+from regex import P
 from yahoo_fin import stock_info as si
 from sklearn import preprocessing
 import numpy as np
 import pandas as pd
-from datetime import date
+from datetime import date, datetime
 from GoogleNews import GoogleNews
 from urllib.parse import urlparse
 import re
@@ -11,6 +12,31 @@ from talib import BBANDS
 
 from .models import New
 
+def splitRange(rangeIni,rangeEnd):
+    start = pd.Timestamp(rangeIni)
+    end = pd.Timestamp(rangeEnd)
+    parts = list(pd.date_range(start, end, freq='M')) 
+
+    if start != parts[0]:
+        parts.insert(0, start)
+    if end != parts[-1]:
+        parts.append(end)
+
+    parts[0] -= pd.Timedelta('1d')
+    pairs = zip(map(lambda d: d + pd.Timedelta('1d'), parts[:-1]), parts[1:]) #Slice last row for convenience, and first row for make the ranges, and zip it
+    dfDateRanges = pd.DataFrame(pairs, columns = ['ini', 'end'])
+    # pairs_str = list(map(lambda t: t[0].strftime('%Y-%m-%d') + ' - ' + t[1].strftime('%Y-%m-%d'), pairs))
+    return dfDateRanges
+
+# def dateRange(start, end, intv): 
+#     # https://stackoverflow.com/questions/29721228/given-a-date-range-how-can-we-break-it-up-into-n-contiguous-sub-intervals
+#     if not isinstance(start, datetime) or not isinstance(end, datetime):
+#         start = datetime.strptime(start,"%Y-%m-%d")
+#         end = datetime.strptime(end,"%Y-%m-%d")
+#     diff = (end  - start ) / intv
+#     for i in range(intv):
+#         yield (start + diff * i).strftime("%Y-%m-%d")
+#     yield end.strftime("%Y-%m-%d")
 
 def scalator(df):
     column_scaler = {}
@@ -113,35 +139,60 @@ def lWCFix(df):
     volumeData = volumeData.to_dict(orient='records')
     return candleData, volumeData
 
-def newsExtract(sbl, provider = False):
-    """Method for extracting news from a ticker and save or load them to/from the database as well as returning them
-
-    Args:
-        sbl (_type_): symbol name
-        provider (bool, optional): We only need provider when showing news, when getting news for prediction the provider is not needed. Defaults to False.
-
-    Returns:
-        list: list of the lastest 3 news
-    """
+def newsChecker(sbl):
     dateToday = date.today()
     dateDaysAgo = dateToday - pd.DateOffset(days=7)
     news = New.objects.filter(date__gt=dateDaysAgo)
-    
-    startRange = dateToday.strftime('%m-%d-%Y')
-    endRange = dateDaysAgo.strftime('%m-%d-%Y')
-
     if len(news) < 3:
-        googlenews = GoogleNews(start=startRange,end=endRange)
-        googlenews.search(sbl)
-        listNews = googlenews.results()
-        for index in range(3):
-            urlParsed = urlparse(listNews[index]['link'])
-            provider = re.sub('www.', '',urlParsed.netloc)
-            provider = re.sub('\..*', '',provider)
-            newNew = New(title = listNews[index]['title'], date = listNews[index]['datetime'], desc = listNews[index]['desc'], link = listNews[index]['link'], provider = provider)
-            newNew.save()
+        listReturn = newsExtract(sbl, dateToday, dateDaysAgo, save = True)
+    else:
+        listReturn = New.objects.filter(pk__gte=New.objects.count() - 3)
+    return listReturn
 
-    listReturn = New.objects.filter(pk__gte=New.objects.count() - 3)
+def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOfNews = 3, save = False):
+    """news extractor
+
+    Args:
+        sbl (str): search param
+        iniRange (_type_): begining of range
+        endRange (_type_): end of rnage
+        provider (bool, optional): _description_. Defaults to False.
+        all (bool, optional): all news. Defaults to False.
+        numberOfNews (int, optional): number of news, if not all. Defaults to 3.
+        save (bool, optional): save news. Defaults to False.
+
+    Returns:
+        list: list of news
+    """    
+    iniRange = iniRange.strftime('%m-%d-%Y')
+    endRange = endRange.strftime('%m-%d-%Y')
+
+    googlenews = GoogleNews(start=iniRange,end=endRange, lang='en')
+
+    googlenews.search(sbl)
+    listNews = googlenews.results()
+
+    listReturn = []
+    if all:
+        numberOfNews = len(listNews)
+        print(numberOfNews)
+    for index in range(numberOfNews):
+        urlParsed = urlparse(listNews[index]['link'])
+        provider = re.sub('www.', '',urlParsed.netloc)
+        provider = re.sub('\..*', '',provider)
+        # listReturn.append(New(title = listNews[index]['title'],date = listNews[index]['datetime'],desc = listNews[index]['desc'],link = listNews[index]['link'],provider = provider))
+        if listNews[index]['datetime']:
+            listReturn.append([listNews[index]['title'],listNews[index]['datetime'].date(),listNews[index]['desc'],listNews[index]['link'],provider])  
+        # dfNews = pd.DataFrame(listReturn, columns=["title", "date", "desc", "link", "provider"])
+    if save:
+        model_instances = [ New(
+            title = new[0],
+            date = new[1],
+            desc = new[2],
+            link = new[3],
+            provider = new[4]
+        ) for new in listReturn ]
+        New.objects.bulk_create(model_instances)
     return listReturn
 
 def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):

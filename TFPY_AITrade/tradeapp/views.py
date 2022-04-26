@@ -1,3 +1,5 @@
+from fileinput import filename
+from re import X
 from typing import NewType
 from django.http import JsonResponse
 from yahoo_fin import stock_info as si
@@ -5,12 +7,16 @@ from django.shortcuts import render
 from django.views.generic import ListView, DetailView
 from django.http import HttpResponseRedirect
 from django.http import HttpResponse
-from .utils import scalator, get_dataYahoo, lWCFix, newsExtract, addIndicators
+from .utils import scalator, get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, splitRange
 from .models import New
+from textblob import TextBlob
 
 import numpy as np
 import pandas as pd
-from datetime import date
+from datetime import datetime
+
+
+import timeit
 
 # Create your views here.
 def home_view(request):
@@ -50,8 +56,8 @@ def symbol_view(request, sbl):
         "Full"
     ]
 
-    latestNews = newsExtract(sbl)
-
+    latestNews = newsChecker(sbl)
+    
     indicators = pd.DataFrame()
     indicators['full'] = ['Bollinger Bands', 'Double Exponential Moving Average', 'Relative Strength Index', 'Moving Average Convergence Divergence']
     indicators['acronym'] = ['BB', 'DEMA', 'RSI','MACD']
@@ -106,13 +112,49 @@ def answer(request):
 
 def createModel(request, sbl):
     if request.POST.get('action') == 'create-model':
-        # Data extraction
-        df = get_dataYahoo(ticker = request.POST.get('benchmark'), scaled = False, dropTicker = True, rangeIni = request.POST.get('rangeIni'), rangeEnd = request.POST.get('rangeEnd'))
+        rangeIni = datetime.strptime(request.POST.get('rangeIni'), '%Y-%m-%d')
+        rangeEnd = datetime.strptime(request.POST.get('rangeEnd'), '%Y-%m-%d')
+        benchmark = request.POST.get('benchmark')
+        df = get_dataYahoo(ticker = benchmark, scaled = False, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
         # Add indicators
-        df = addIndicators(df, BB = True)
-        scalator(df)
-        print(df)
-        if(request.POST.get('news')):
-            print(request.POST.get('news'))
+        # df = addIndicators(df, BB = True)
+        # Add news if news
+        if (request.POST.get('news')):
+            dfDateRanges = splitRange(rangeIni,rangeEnd)
+
+            listForDF = []
+            # ESTO HAY QUE MEJORARLO ITER ROWS ES MALA IDEA PERO NO SE COMO HACERLO AHORA MISMO
+            for index, r in dfDateRanges.iterrows():
+                listForDF.extend(newsExtract(benchmark,r['ini'],r['end'], all = True))
+            dfNewsPLN = pd.DataFrame(listForDF, columns=["title", "date", "desc", "link", "provider"])
+
+            # Make PLN of description
+            dfNewsPLN['polarity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.polarity)
+            dfNewsPLN['subjectivity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.subjectivity)
+
+            # Drop useless columns
+            dfNewsPLN = dfNewsPLN.drop(columns=['title', 'desc', 'link', 'provider'])
+
+            # Do a mean of values
+            dfNewsPLN = dfNewsPLN.groupby('date', as_index = False).mean()
+
+            # Make date same type for left join
+            df['date'] = pd.to_datetime(df['date'])
+            dfNewsPLN['date'] = pd.to_datetime(dfNewsPLN['date'])
+
+            # Do left join
+            df = df.merge(dfNewsPLN, on=['date'], how="left")
+
+            # Fill nan values with latest values
+            df = df.ffill()
+
+            # Drop NaN values
+            df.dropna(subset=['polarity'], how='all', inplace=True)
+
+            print(df)
+        # Scalate results
+        # scalator(df)
+        # Create model
+        # print(df)
 
     return HttpResponse('')

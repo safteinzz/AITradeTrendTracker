@@ -28,9 +28,9 @@ function inputTags(input, whiteList, defaultTags) {
 function dateSelector(container, selection, iniRangeInput, endRangeInput){
 	value = 0;
 	if(container.is(':hidden')){container.slideDown();}
-	if (selection.index() == 1){value = 7;}
-	else if (selection.index() == 2){value = 30;}
-	else if (selection.index() == 3){value = 180;}
+	if (selection.index() == 1){value = 30;}
+	else if (selection.index() == 2){value = 180;}
+	else if (selection.index() == 3){value = 360;}
 	else if (selection.index() == 4){container.slideUp();}
 	else {return;}
 	var today = new Date();
