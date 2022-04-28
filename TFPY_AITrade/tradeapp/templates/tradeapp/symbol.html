@@ -120,16 +120,20 @@ Market {{sbl}}
 				</div>
 
 			</div>
-			<div class="form-group ">
+			<div class="form-group pb-3">
 				<input name="creationInputNewsCheck" id="creationInputNewsCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
 					data-bs-target="#collapseNews" aria-expanded="false" aria-controls="collapseNews" />
-				<label class="form-check-label fs-5" for="creationInputNewsCheck">News</label>			
+				<label class="form-check-label fs-5" for="creationInputNewsCheck">News</label>
 				<div id="collapseNews" class="collapse">
 					<input name="creationInputNews" id="creationInputNews" type="text" class="form-control inputCell" placeholder="Banned Websites" />
 				</div>
-
+			</div>
+			<div class="form-group ">
+			<input name="creationInputScalateCheck" id="creationInputScalateCheck" class="form-check-input fs-5" type="checkbox"/>
+			<label class="form-check-label fs-5" for="creationInputScalateCheck">Scalate</label>
 			</div>
 		</div>
+		
 		<div class="col-sm-1"></div>
 		<div class="col-sm-3">
 			<div class="form-group">
@@ -355,6 +359,10 @@ $("#submitModelCreation").click(function (){
 	formData.append('benchmark', $( "#creationInputBenchmark option:selected" ).text());
 	formData.append('algorithm', $( "#creationInputAlgorithm option:selected" ).text());
 	formData.append('ensemble', $( "#creationInputEnsemble option:selected" ).text());
+
+	if ($('#creationInputScalateCheck').is(':checked')){
+		formData.append('scalate', 'True');
+	}
 
 	formData.append('action', 'create-model');
 	formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');

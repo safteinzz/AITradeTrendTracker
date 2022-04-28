@@ -10,6 +10,17 @@ from urllib.parse import urlparse
 import re
 from talib import BBANDS
 
+
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional
+from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+from collections import deque
+import os
+
+
 from .models import New
 
 def splitRange(rangeIni,rangeEnd):
@@ -28,25 +39,22 @@ def splitRange(rangeIni,rangeEnd):
     # pairs_str = list(map(lambda t: t[0].strftime('%Y-%m-%d') + ' - ' + t[1].strftime('%Y-%m-%d'), pairs))
     return dfDateRanges
 
-# def dateRange(start, end, intv): 
-#     # https://stackoverflow.com/questions/29721228/given-a-date-range-how-can-we-break-it-up-into-n-contiguous-sub-intervals
-#     if not isinstance(start, datetime) or not isinstance(end, datetime):
-#         start = datetime.strptime(start,"%Y-%m-%d")
-#         end = datetime.strptime(end,"%Y-%m-%d")
-#     diff = (end  - start ) / intv
-#     for i in range(intv):
-#         yield (start + diff * i).strftime("%Y-%m-%d")
-#     yield end.strftime("%Y-%m-%d")
+# def scalator(df,unDesiredColumns):
+#     column_scaler = {}
+#     for columnName in df.columns:
+#         if columnName not in unDesiredColumns:
+#             scaler = preprocessing.MinMaxScaler()
+#             df[columnName] = scaler.fit_transform(np.expand_dims(df[columnName].values, axis=1))
+#             column_scaler[columnName] = scaler
+#         else:
+#             pass
 
-def scalator(df):
-    column_scaler = {}
-    for columnName in df.columns:
-        if columnName != 'ticker' and columnName != 'date':
-            scaler = preprocessing.MinMaxScaler()
-            df[columnName] = scaler.fit_transform(np.expand_dims(df[columnName].values, axis=1))
-            column_scaler[columnName] = scaler
-        else:
-            pass
+def shuffle_in_unison(a, b):
+    # shuffle two arrays in the same way
+    state = np.random.get_state()
+    np.random.shuffle(a)
+    np.random.set_state(state)
+    np.random.shuffle(b)
 
 def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None, rangeIni = False, rangeEnd = False):
     """Method for the data extraction of the selected ticker with modified results based on different parameters
@@ -103,9 +111,9 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
     if dropTicker:
         del df["ticker"]
 
-    # Scale values 0-1 (better perfomance)
-    if scaled:
-        scalator(df)
+    # # Scale values 0-1 (better perfomance)
+    # if scaled:
+    #     scalator(df)
 
     # Add news (deberia de sacar positividad de las noticias medias en referencia al tema para agregarlo como positividad de las noticias como linea adicional)
     if news:
@@ -208,15 +216,127 @@ def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):
     if BB:
         df['upperband'], df['middleband'], df['lowerband'] = BBANDS(df['close'], timeperiod=5, nbdevup=2, nbdevdn=2, matype=0)
     
-
     # Clean
     df = df.dropna()
     df = df.reset_index(drop=True)
     return df
     
 
+def model_creation(sequence_length, n_features, units=256, cell=LSTM, n_layers=2, dropout=0.3,
+                loss="mean_absolute_error", optimizer="rmsprop", bidirectional=False ):
+    model = Sequential()
+    for i in range(n_layers):
+        if i == 0:
+            # first layer
+            if bidirectional:
+                model.add(Bidirectional(cell(units, return_sequences=True), batch_input_shape=(None, sequence_length, n_features)))
+            else:
+                model.add(cell(units, return_sequences=True, batch_input_shape=(None, sequence_length, n_features)))
+        elif i == n_layers - 1:
+            # last layer
+            if bidirectional:
+                model.add(Bidirectional(cell(units, return_sequences=False)))
+            else:
+                model.add(cell(units, return_sequences=False))
+        else:
+            # hidden layers
+            if bidirectional:
+                model.add(Bidirectional(cell(units, return_sequences=True)))
+            else:
+                model.add(cell(units, return_sequences=True))
+        # add dropout after each layer
+        model.add(Dropout(dropout))
+    model.add(Dense(1, activation="linear"))
+    model.compile(loss=loss, metrics=["accuracy"], optimizer=optimizer)
+    return model
 
 
-        
+def learning_launch(df, epochs = 200, batch_size = 32): #https://www.youtube.com/watch?v=6_2hzRopPbQ
+    n_steps=2
+    shuffle=True
+    lookup_step=1
+    split_by_date=True
+    test_size=0.2
+    feature_columns=['adjclose', 'volume', 'open', 'high', 'low']
+    scale = True
+    
 
+    # this will contain all the elements we want to return from this function
+    result = {}
+    # we will also return the original dataframe itself
+    result['df'] = df.copy()
+
+
+    if scale:
+        column_scaler = {}
+        # scale the data (prices) from 0 to 1
+        for column in feature_columns:
+            scaler = preprocessing.MinMaxScaler()
+            df[column] = scaler.fit_transform(np.expand_dims(df[column].values, axis=1))
+            column_scaler[column] = scaler
+        # add the MinMaxScaler instances to the result returned
+        result["column_scaler"] = column_scaler
+
+
+    df['future'] = df['adjclose'].shift(-lookup_step)
+
+    last_sequence = np.array(df[feature_columns].tail(lookup_step))
+    df.dropna(inplace=True)
+
+    sequence_data = []
+    sequences = deque(maxlen=n_steps)
+    for entry, target in zip(df[feature_columns + ["date"]].values, df['future'].values):
+        sequences.append(entry)
+        if len(sequences) == n_steps:
+            sequence_data.append([np.array(sequences), target])
+
+    last_sequence = list([s[:len(feature_columns)] for s in sequences]) + list(last_sequence)
+    last_sequence = np.array(last_sequence).astype(np.float32)
+    result['last_sequence'] = last_sequence
+
+    X, y = [], []
+    for seq, target in sequence_data:
+        X.append(seq)
+        y.append(target)
+
+    X = np.array(X)
+    y = np.array(y)
+    if split_by_date:
+        # split the dataset into training & testing sets by date (not randomly splitting)
+        train_samples = int((1 - test_size) * len(X))
+        result["X_train"] = X[:train_samples]
+        result["y_train"] = y[:train_samples]
+        result["X_test"]  = X[train_samples:]
+        result["y_test"]  = y[train_samples:]
+        if shuffle:
+            # shuffle the datasets for training (if shuffle parameter is set)
+            shuffle_in_unison(result["X_train"], result["y_train"])
+            shuffle_in_unison(result["X_test"], result["y_test"])
+    else:    
+        # split the dataset randomly
+        result["X_train"], result["X_test"], result["y_train"], result["y_test"] = train_test_split(X, y, 
+                                                                                test_size=test_size, shuffle=shuffle)
+
+    # get the list of test set dates
+    dates = result["X_test"][:, -1, -1]
+    # retrieve test features from the original dataframe
+    result["test_df"] = result["df"].reindex(dates, axis = 1)
+    # # remove duplicated dates in the testing dataframe
+    result["test_df"] = result["test_df"][~result["test_df"].index.duplicated(keep='first')]
+    # # remove dates from the training/testing sets & convert to float32
+    result["X_train"] = result["X_train"][:, :, :len(feature_columns)].astype(np.float32)
+    result["X_test"] = result["X_test"][:, :, :len(feature_columns)].astype(np.float32)
+
+
+    model = model_creation(n_steps, len(feature_columns), loss='huber_loss', units=256, cell=LSTM, n_layers=2,
+                    dropout=0.4, optimizer='adam')
+
+
+    history = model.fit(result["X_train"], result["y_train"],
+                        batch_size=64,
+                        epochs=epochs,
+                        validation_data=(result["X_test"], result["y_test"]),
+                        verbose=1)
+
+    pass
     

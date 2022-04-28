@@ -7,9 +7,15 @@ from django.shortcuts import render
 from django.views.generic import ListView, DetailView
 from django.http import HttpResponseRedirect
 from django.http import HttpResponse
-from .utils import scalator, get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, splitRange
+from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, splitRange, learning_launch
 from .models import New
+
+
+
 from textblob import TextBlob
+
+
+
 
 import numpy as np
 import pandas as pd
@@ -114,10 +120,11 @@ def createModel(request, sbl):
     if request.POST.get('action') == 'create-model':
         rangeIni = datetime.strptime(request.POST.get('rangeIni'), '%Y-%m-%d')
         rangeEnd = datetime.strptime(request.POST.get('rangeEnd'), '%Y-%m-%d')
+        scalate = request.POST.get('scalate')
         benchmark = request.POST.get('benchmark')
         df = get_dataYahoo(ticker = benchmark, scaled = False, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
         # Add indicators
-        # df = addIndicators(df, BB = True)
+        df = addIndicators(df, BB = True)
         # Add news if news
         if (request.POST.get('news')):
             dfDateRanges = splitRange(rangeIni,rangeEnd)
@@ -150,11 +157,11 @@ def createModel(request, sbl):
 
             # Drop NaN values
             df.dropna(subset=['polarity'], how='all', inplace=True)
-
-            print(df)
         # Scalate results
-        # scalator(df)
-        # Create model
-        # print(df)
+        # if scalate:
+        #     scalator(df,['date', 'polarity', 'subjectivity'])
+        
 
+        learning_launch(df)
+        # print(df)
     return HttpResponse('')
