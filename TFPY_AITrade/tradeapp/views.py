@@ -7,7 +7,7 @@ from django.shortcuts import render
 from django.views.generic import ListView, DetailView
 from django.http import HttpResponseRedirect
 from django.http import HttpResponse
-from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, splitRange, learning_launch
+from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, splitRange, scalator, ml_launch
 from .models import New
 
 
@@ -33,21 +33,6 @@ def markets_view(request):
     return render(request, 'tradeapp/markets.html', {})
 
 def symbol_view(request, sbl):
-        # if request.POST.get('formtype') == 'formModelCreation':
-        #     print(request.POST.get('creationInputModelName'))
-        #     print(request.POST.get('creationInputModelDescription'))
-        #     print(request.POST.get('creationInputBenchmark'))
-        #     print(request.POST.get('creationInputAlgorithm'))
-        #     if request.POST.get('creationInputEnsembleCheck') == 'on':
-        #         print(request.POST.get('creationInputEnsemble'))
-        #     if request.POST.get('creationInputNewsCheck') == 'on':
-        #         print(request.POST.get('creationInputNews'))
-        # elif request.POST.get('formtype') == 'formPrediction':
-        #     print(request.POST.get('predictInputModel'))
-        #     print(request.POST.get('predictInputBenchmark'))
-
-        # return HttpResponseRedirect("/some/url/")
-
     # Extract data
     tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 0)
 
@@ -68,7 +53,7 @@ def symbol_view(request, sbl):
     indicators['full'] = ['Bollinger Bands', 'Double Exponential Moving Average', 'Relative Strength Index', 'Moving Average Convergence Divergence']
     indicators['acronym'] = ['BB', 'DEMA', 'RSI','MACD']
 
-    algorithms = ['K-NN', 'SVC']
+    algorithms = ['Neural network', 'K-NN']
 
     data = {
         'sbl' : sbl,
@@ -158,10 +143,9 @@ def createModel(request, sbl):
             # Drop NaN values
             df.dropna(subset=['polarity'], how='all', inplace=True)
         # Scalate results
-        # if scalate:
-        #     scalator(df,['date', 'polarity', 'subjectivity'])
-        
+        if scalate:
+            scalator(df,['date', 'polarity', 'subjectivity'])
 
-        learning_launch(df)
-        # print(df)
+        ml_launch(df, type = 0, epochs=50, batch_size = 6)
+        
     return HttpResponse('')

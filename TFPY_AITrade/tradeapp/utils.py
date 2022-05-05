@@ -11,15 +11,17 @@ import re
 from talib import BBANDS
 
 
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
+import os
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
-from sklearn import preprocessing
-from sklearn.model_selection import train_test_split
-from collections import deque
-import os
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.preprocessing import MinMaxScaler
 
+from sklearn.neighbors import KNeighborsRegressor
+from math import sqrt
+from sklearn.metrics import mean_squared_error 
 
 from .models import New
 
@@ -39,15 +41,15 @@ def splitRange(rangeIni,rangeEnd):
     # pairs_str = list(map(lambda t: t[0].strftime('%Y-%m-%d') + ' - ' + t[1].strftime('%Y-%m-%d'), pairs))
     return dfDateRanges
 
-# def scalator(df,unDesiredColumns):
-#     column_scaler = {}
-#     for columnName in df.columns:
-#         if columnName not in unDesiredColumns:
-#             scaler = preprocessing.MinMaxScaler()
-#             df[columnName] = scaler.fit_transform(np.expand_dims(df[columnName].values, axis=1))
-#             column_scaler[columnName] = scaler
-#         else:
-#             pass
+def scalator(df,unDesiredColumns):
+    column_scaler = {}
+    for columnName in df.columns:
+        if columnName not in unDesiredColumns:
+            scaler = preprocessing.MinMaxScaler()
+            df[columnName] = scaler.fit_transform(np.expand_dims(df[columnName].values, axis=1))
+            column_scaler[columnName] = scaler
+        else:
+            pass
 
 def shuffle_in_unison(a, b):
     # shuffle two arrays in the same way
@@ -111,9 +113,9 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
     if dropTicker:
         del df["ticker"]
 
-    # # Scale values 0-1 (better perfomance)
-    # if scaled:
-    #     scalator(df)
+    # Scale values 0-1 (better perfomance)
+    if scaled:
+        scalator(df)
 
     # Add news (deberia de sacar positividad de las noticias medias en referencia al tema para agregarlo como positividad de las noticias como linea adicional)
     if news:
@@ -150,11 +152,11 @@ def lWCFix(df):
 def newsChecker(sbl):
     dateToday = date.today()
     dateDaysAgo = dateToday - pd.DateOffset(days=7)
-    news = New.objects.filter(date__gt=dateDaysAgo)
+    news = New.objects.filter(ticker=sbl).filter(date__gt=dateDaysAgo)
     if len(news) < 3:
         listReturn = newsExtract(sbl, dateToday, dateDaysAgo, save = True)
     else:
-        listReturn = New.objects.filter(pk__gte=New.objects.count() - 3)
+        listReturn = New.objects.filter(ticker=sbl).filter(pk__gte=New.objects.count() - 3)
     return listReturn
 
 def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOfNews = 3, save = False):
@@ -198,7 +200,8 @@ def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOf
             date = new[1],
             desc = new[2],
             link = new[3],
-            provider = new[4]
+            provider = new[4],
+            ticker = sbl
         ) for new in listReturn ]
         New.objects.bulk_create(model_instances)
     return listReturn
@@ -222,121 +225,86 @@ def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):
     return df
     
 
-def model_creation(sequence_length, n_features, units=256, cell=LSTM, n_layers=2, dropout=0.3,
-                loss="mean_absolute_error", optimizer="rmsprop", bidirectional=False ):
+def deep_learning_model_creation(X_Train, layers = 2, optimizer="rmsprop", units=256,  bidirectional = False, dropout=0.2, loss="mean_absolute_error"):
+    # https://towardsdatascience.com/predicting-stock-prices-using-a-keras-lstm-model-4225457f0233
     model = Sequential()
-    for i in range(n_layers):
+    for i in range(layers):
         if i == 0:
-            # first layer
+            # First layer
             if bidirectional:
-                model.add(Bidirectional(cell(units, return_sequences=True), batch_input_shape=(None, sequence_length, n_features)))
+                model.add(Bidirectional(LSTM(units=units,return_sequences=True,input_shape=(X_Train.shape[1], 1))))
             else:
-                model.add(cell(units, return_sequences=True, batch_input_shape=(None, sequence_length, n_features)))
-        elif i == n_layers - 1:
-            # last layer
+                model.add(LSTM(units=units,return_sequences=True,input_shape=(X_Train.shape[1], 1)))
+        elif i == layers - 1:
+            # Last layer
             if bidirectional:
-                model.add(Bidirectional(cell(units, return_sequences=False)))
+                model.add(Bidirectional(LSTM(units=units,return_sequences=False)))
             else:
-                model.add(cell(units, return_sequences=False))
+                model.add(LSTM(units=units,return_sequences=False))
         else:
-            # hidden layers
+            # Hidden layers
             if bidirectional:
-                model.add(Bidirectional(cell(units, return_sequences=True)))
+                model.add(Bidirectional(LSTM(units=units,return_sequences=True)))
             else:
-                model.add(cell(units, return_sequences=True))
-        # add dropout after each layer
+                model.add(LSTM(units=units,return_sequences=True))
+        # Add dropout after each layer
         model.add(Dropout(dropout))
     model.add(Dense(1, activation="linear"))
-    model.compile(loss=loss, metrics=["accuracy"], optimizer=optimizer)
+    model.compile(optimizer=optimizer,loss=loss)
     return model
 
 
-def learning_launch(df, epochs = 200, batch_size = 32): #https://www.youtube.com/watch?v=6_2hzRopPbQ
-    n_steps=2
-    shuffle=True
-    lookup_step=1
-    split_by_date=True
-    test_size=0.2
-    feature_columns=['adjclose', 'volume', 'open', 'high', 'low']
-    scale = True
+def ml_launch(df, epochs = 100, batch_size = 32, type=0, shuffle = False): #https://www.youtube.com/watch?v=6_2hzRopPbQ
+    # poner el lookout step como la cantidad de dias que se quiere mirar en el futuro, poner una linea y a tomar por culo
+    df = df.assign(future=df['adjclose'].shift(-1))
+    df.dropna(subset=['future'], how='all', inplace=True)
+    # df['rising'] = df.apply(lambda x : 1 if x['future'] >= x['adjclose'] else 0, axis=1)
+    df = df.drop(columns=['date'])
+
+    # X =  np.array(df.drop(['future'], axis=1))   
+    # Y =  np.array(df['future'])
+    # X = pd.get_dummies(df.drop(['future'], axis=1))
+    # Y = df['future']
+    print(df)
+    X_Train, X_Test, Y_Train, Y_Test = train_test_split(df.drop(['future'], axis=1), df['future'], test_size=0.2, random_state=1, shuffle = shuffle)
     
+    # Deep learning
+    # https://towardsdatascience.com/a-quick-deep-learning-recipe-time-series-forecasting-with-keras-in-python-f759923ba64
+    if type == 0:
+        model = deep_learning_model_creation(X_Train, optimizer = "adam", loss = "huber_loss", dropout=0.4)
 
-    # this will contain all the elements we want to return from this function
-    result = {}
-    # we will also return the original dataframe itself
-    result['df'] = df.copy()
+        model.fit(
+            X_Train,
+            Y_Train,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_data=(X_Test, Y_Test)
+        )
+        predicted_stock_price = model.predict(X_Test)
+        X_Test['future'] = predicted_stock_price
+        print(X_Test)
 
+    # kNN
+    if type == 1:
+        # https://towardsdatascience.com/forecasting-of-periodic-events-with-ml-5081db493c46
+        params = {'n_neighbors':[2,3,4]}
+        knn = KNeighborsRegressor(algorithm = 'auto', weights = 'distance')
+        model = GridSearchCV(knn, params, cv=5)
+        
+        model.fit(
+            X_Train,
+            Y_Train
+        )
 
-    if scale:
-        column_scaler = {}
-        # scale the data (prices) from 0 to 1
-        for column in feature_columns:
-            scaler = preprocessing.MinMaxScaler()
-            df[column] = scaler.fit_transform(np.expand_dims(df[column].values, axis=1))
-            column_scaler[column] = scaler
-        # add the MinMaxScaler instances to the result returned
-        result["column_scaler"] = column_scaler
-
-
-    df['future'] = df['adjclose'].shift(-lookup_step)
-
-    last_sequence = np.array(df[feature_columns].tail(lookup_step))
-    df.dropna(inplace=True)
-
-    sequence_data = []
-    sequences = deque(maxlen=n_steps)
-    for entry, target in zip(df[feature_columns + ["date"]].values, df['future'].values):
-        sequences.append(entry)
-        if len(sequences) == n_steps:
-            sequence_data.append([np.array(sequences), target])
-
-    last_sequence = list([s[:len(feature_columns)] for s in sequences]) + list(last_sequence)
-    last_sequence = np.array(last_sequence).astype(np.float32)
-    result['last_sequence'] = last_sequence
-
-    X, y = [], []
-    for seq, target in sequence_data:
-        X.append(seq)
-        y.append(target)
-
-    X = np.array(X)
-    y = np.array(y)
-    if split_by_date:
-        # split the dataset into training & testing sets by date (not randomly splitting)
-        train_samples = int((1 - test_size) * len(X))
-        result["X_train"] = X[:train_samples]
-        result["y_train"] = y[:train_samples]
-        result["X_test"]  = X[train_samples:]
-        result["y_test"]  = y[train_samples:]
-        if shuffle:
-            # shuffle the datasets for training (if shuffle parameter is set)
-            shuffle_in_unison(result["X_train"], result["y_train"])
-            shuffle_in_unison(result["X_test"], result["y_test"])
-    else:    
-        # split the dataset randomly
-        result["X_train"], result["X_test"], result["y_train"], result["y_test"] = train_test_split(X, y, 
-                                                                                test_size=test_size, shuffle=shuffle)
-
-    # get the list of test set dates
-    dates = result["X_test"][:, -1, -1]
-    # retrieve test features from the original dataframe
-    result["test_df"] = result["df"].reindex(dates, axis = 1)
-    # # remove duplicated dates in the testing dataframe
-    result["test_df"] = result["test_df"][~result["test_df"].index.duplicated(keep='first')]
-    # # remove dates from the training/testing sets & convert to float32
-    result["X_train"] = result["X_train"][:, :, :len(feature_columns)].astype(np.float32)
-    result["X_test"] = result["X_test"][:, :, :len(feature_columns)].astype(np.float32)
-
-
-    model = model_creation(n_steps, len(feature_columns), loss='huber_loss', units=256, cell=LSTM, n_layers=2,
-                    dropout=0.4, optimizer='adam')
-
-
-    history = model.fit(result["X_train"], result["y_train"],
-                        batch_size=64,
-                        epochs=epochs,
-                        validation_data=(result["X_test"], result["y_test"]),
-                        verbose=1)
-
-    pass
+        knn_prediction  = model.predict(X_Test)
+        # error = sqrt(mean_squared_error(Y_Test,y_pred))
+        # print(error)
+        X_Test['future'] = knn_prediction
+        print(X_Test)
+        # print(accuracy_score(Y_Test, y_pred))
+    
+    # Random Forest
+    if type == 2:
+        pass        
+    return model
     
