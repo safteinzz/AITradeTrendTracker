@@ -165,7 +165,7 @@ Market {{sbl}}
 			</select>
 			</div>
 
-			<div class="row align-items-center pb-3">
+			{% comment %} <div class="row align-items-center pb-3">
 				<div class="col-sm-2">
 					<label class="fs-5" for="predictInputRange">Range</label>
 				</div>
@@ -190,7 +190,7 @@ Market {{sbl}}
 						<input type="date" class="form-control" id="predictInputEndRange">
 					</div>
 				</div>
-			</div>
+			</div> {% endcomment %}
 
 			<hr />
 
@@ -357,7 +357,7 @@ $("#submitModelCreation").click(function (){
 		formData.append('blacklist', $('#creationInputNews').val());
 	}
 	formData.append('benchmark', $( "#creationInputBenchmark option:selected" ).text());
-	formData.append('algorithm', $( "#creationInputAlgorithm option:selected" ).text());
+	formData.append('algorithm', $( "#creationInputAlgorithm option:selected" ).index());
 	formData.append('ensemble', $( "#creationInputEnsemble option:selected" ).text());
 
 	if ($('#creationInputScalateCheck').is(':checked')){
@@ -394,8 +394,8 @@ inputTags(document.querySelector('.inputCell'), [],[]);
 $("#creationInputRange").change(function(){
 	dateSelector($('#creationInputRangeDiv'),$("#creationInputRange option:selected"),$("#creationInputIniRange"),$("#creationInputEndRange"));
 });
-$("#predictInputRange").change(function(){
+{% comment %} $("#predictInputRange").change(function(){
 	dateSelector($('#predictInputRangeDiv'),$("#predictInputRange option:selected"),$("#predictInputIniRange"),$("#predictInputEndRange"));
-});
+}); {% endcomment %}
 </script>
 {% endblock scripts %}

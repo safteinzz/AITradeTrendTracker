@@ -254,7 +254,7 @@ def ml_launch(df, epochs = 100, batch_size = 32, type=0, shuffle = False): #http
     
     # Deep learning
     # https://towardsdatascience.com/a-quick-deep-learning-recipe-time-series-forecasting-with-keras-in-python-f759923ba64
-    if type == 0:
+    if type == 1:
         model = deep_learning_model_creation(X_Train, optimizer = "adam", loss = "huber_loss", dropout=0.4)
         model.fit(
             X_Train,
@@ -265,8 +265,8 @@ def ml_launch(df, epochs = 100, batch_size = 32, type=0, shuffle = False): #http
         )
 
     # kNN
-    if type == 1:
-        # https://towardsdatascience.com/forecasting-of-periodic-events-with-ml-5081db493c46
+    # https://towardsdatascience.com/forecasting-of-periodic-events-with-ml-5081db493c46
+    if type == 2:        
         params = {'n_neighbors':[2,3,4]}
         knn = KNeighborsRegressor(algorithm = 'auto', weights = 'distance')
         model = GridSearchCV(knn, params, cv=5)
@@ -275,7 +275,6 @@ def ml_launch(df, epochs = 100, batch_size = 32, type=0, shuffle = False): #http
             Y_Train
         )
     
-
     y_pred = model.predict(X_Test)
     error = sqrt(mean_squared_error(Y_Test,y_pred))
     print(error)

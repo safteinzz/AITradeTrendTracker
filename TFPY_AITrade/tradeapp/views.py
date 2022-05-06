@@ -103,49 +103,54 @@ def answer(request):
 
 def createModel(request, sbl):
     if request.POST.get('action') == 'create-model':
-        rangeIni = datetime.strptime(request.POST.get('rangeIni'), '%Y-%m-%d')
-        rangeEnd = datetime.strptime(request.POST.get('rangeEnd'), '%Y-%m-%d')
-        scalate = request.POST.get('scalate')
-        benchmark = request.POST.get('benchmark')
-        df = get_dataYahoo(ticker = benchmark, scaled = False, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
-        # Add indicators
-        df = addIndicators(df, BB = True)
-        # Add news if news
-        if (request.POST.get('news')):
-            dfDateRanges = splitRange(rangeIni,rangeEnd)
+        algorithm = int(request.POST.get('algorithm'))
+        if(algorithm > 0):
+            rangeIni = datetime.strptime(request.POST.get('rangeIni'), '%Y-%m-%d')
+            rangeEnd = datetime.strptime(request.POST.get('rangeEnd'), '%Y-%m-%d')
+            scalate = request.POST.get('scalate')
+            benchmark = request.POST.get('benchmark')
+            
+            df = get_dataYahoo(ticker = benchmark, scaled = False, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
+            # Add indicators
+            df = addIndicators(df, BB = True)
+            # Add news if news
+            if (request.POST.get('news')):
+                dfDateRanges = splitRange(rangeIni,rangeEnd)
 
-            listForDF = []
-            # ESTO HAY QUE MEJORARLO ITER ROWS ES MALA IDEA PERO NO SE COMO HACERLO AHORA MISMO
-            for index, r in dfDateRanges.iterrows():
-                listForDF.extend(newsExtract(benchmark,r['ini'],r['end'], all = True))
-            dfNewsPLN = pd.DataFrame(listForDF, columns=["title", "date", "desc", "link", "provider"])
+                listForDF = []
+                # ESTO HAY QUE MEJORARLO ITER ROWS ES MALA IDEA PERO NO SE COMO HACERLO AHORA MISMO
+                for index, r in dfDateRanges.iterrows():
+                    listForDF.extend(newsExtract(benchmark,r['ini'],r['end'], all = True))
+                dfNewsPLN = pd.DataFrame(listForDF, columns=["title", "date", "desc", "link", "provider"])
 
-            # Make PLN of description
-            dfNewsPLN['polarity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.polarity)
-            dfNewsPLN['subjectivity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.subjectivity)
+                # Make PLN of description
+                dfNewsPLN['polarity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.polarity)
+                dfNewsPLN['subjectivity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.subjectivity)
 
-            # Drop useless columns
-            dfNewsPLN = dfNewsPLN.drop(columns=['title', 'desc', 'link', 'provider'])
+                # Drop useless columns
+                dfNewsPLN = dfNewsPLN.drop(columns=['title', 'desc', 'link', 'provider'])
 
-            # Do a mean of values
-            dfNewsPLN = dfNewsPLN.groupby('date', as_index = False).mean()
+                # Do a mean of values
+                dfNewsPLN = dfNewsPLN.groupby('date', as_index = False).mean()
 
-            # Make date same type for left join
-            df['date'] = pd.to_datetime(df['date'])
-            dfNewsPLN['date'] = pd.to_datetime(dfNewsPLN['date'])
+                # Make date same type for left join
+                df['date'] = pd.to_datetime(df['date'])
+                dfNewsPLN['date'] = pd.to_datetime(dfNewsPLN['date'])
 
-            # Do left join
-            df = df.merge(dfNewsPLN, on=['date'], how="left")
+                # Do left join
+                df = df.merge(dfNewsPLN, on=['date'], how="left")
 
-            # Fill nan values with latest values
-            df = df.ffill()
+                # Fill nan values with latest values
+                df = df.ffill()
 
-            # Drop NaN values
-            df.dropna(subset=['polarity'], how='all', inplace=True)
-        # Scalate results
-        if scalate:
-            scalator(df,['date', 'polarity', 'subjectivity'])
+                # Drop NaN values
+                df.dropna(subset=['polarity'], how='all', inplace=True)
+            # Scalate results
+            if scalate:
+                scalator(df,['date', 'polarity', 'subjectivity'])
 
-        ml_launch(df, type = 0, epochs=50, batch_size = 6)
+            ml_launch(df, type = algorithm, epochs=100, batch_size = 3)
+        else:
+            print('no selected dar error')
         
     return HttpResponse('')
