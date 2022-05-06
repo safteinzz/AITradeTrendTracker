@@ -15,9 +15,9 @@ import os
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional
 from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, accuracy_score
 
 from sklearn.neighbors import KNeighborsRegressor
 from math import sqrt
@@ -225,28 +225,16 @@ def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):
     return df
     
 
-def deep_learning_model_creation(X_Train, layers = 2, optimizer="rmsprop", units=256,  bidirectional = False, dropout=0.2, loss="mean_absolute_error"):
+def deep_learning_model_creation(X_Train, layers = 2, optimizer="rmsprop", units=256, dropout=0.2, loss="mean_absolute_error"):
     # https://towardsdatascience.com/predicting-stock-prices-using-a-keras-lstm-model-4225457f0233
     model = Sequential()
     for i in range(layers):
         if i == 0:
-            # First layer
-            if bidirectional:
-                model.add(Bidirectional(LSTM(units=units,return_sequences=True,input_shape=(X_Train.shape[1], 1))))
-            else:
-                model.add(LSTM(units=units,return_sequences=True,input_shape=(X_Train.shape[1], 1)))
+            model.add(LSTM(units=units,return_sequences=True,input_shape=(X_Train.shape[1], 1)))
         elif i == layers - 1:
-            # Last layer
-            if bidirectional:
-                model.add(Bidirectional(LSTM(units=units,return_sequences=False)))
-            else:
-                model.add(LSTM(units=units,return_sequences=False))
+            model.add(LSTM(units=units,return_sequences=False))
         else:
-            # Hidden layers
-            if bidirectional:
-                model.add(Bidirectional(LSTM(units=units,return_sequences=True)))
-            else:
-                model.add(LSTM(units=units,return_sequences=True))
+            model.add(LSTM(units=units,return_sequences=True))
         # Add dropout after each layer
         model.add(Dropout(dropout))
     model.add(Dense(1, activation="linear"))
@@ -256,23 +244,18 @@ def deep_learning_model_creation(X_Train, layers = 2, optimizer="rmsprop", units
 
 def ml_launch(df, epochs = 100, batch_size = 32, type=0, shuffle = False): #https://www.youtube.com/watch?v=6_2hzRopPbQ
     # poner el lookout step como la cantidad de dias que se quiere mirar en el futuro, poner una linea y a tomar por culo
+    
     df = df.assign(future=df['adjclose'].shift(-1))
     df.dropna(subset=['future'], how='all', inplace=True)
     # df['rising'] = df.apply(lambda x : 1 if x['future'] >= x['adjclose'] else 0, axis=1)
     df = df.drop(columns=['date'])
 
-    # X =  np.array(df.drop(['future'], axis=1))   
-    # Y =  np.array(df['future'])
-    # X = pd.get_dummies(df.drop(['future'], axis=1))
-    # Y = df['future']
-    print(df)
     X_Train, X_Test, Y_Train, Y_Test = train_test_split(df.drop(['future'], axis=1), df['future'], test_size=0.2, random_state=1, shuffle = shuffle)
     
     # Deep learning
     # https://towardsdatascience.com/a-quick-deep-learning-recipe-time-series-forecasting-with-keras-in-python-f759923ba64
     if type == 0:
         model = deep_learning_model_creation(X_Train, optimizer = "adam", loss = "huber_loss", dropout=0.4)
-
         model.fit(
             X_Train,
             Y_Train,
@@ -280,9 +263,6 @@ def ml_launch(df, epochs = 100, batch_size = 32, type=0, shuffle = False): #http
             batch_size=batch_size,
             validation_data=(X_Test, Y_Test)
         )
-        predicted_stock_price = model.predict(X_Test)
-        X_Test['future'] = predicted_stock_price
-        print(X_Test)
 
     # kNN
     if type == 1:
@@ -290,21 +270,15 @@ def ml_launch(df, epochs = 100, batch_size = 32, type=0, shuffle = False): #http
         params = {'n_neighbors':[2,3,4]}
         knn = KNeighborsRegressor(algorithm = 'auto', weights = 'distance')
         model = GridSearchCV(knn, params, cv=5)
-        
         model.fit(
             X_Train,
             Y_Train
         )
-
-        knn_prediction  = model.predict(X_Test)
-        # error = sqrt(mean_squared_error(Y_Test,y_pred))
-        # print(error)
-        X_Test['future'] = knn_prediction
-        print(X_Test)
-        # print(accuracy_score(Y_Test, y_pred))
     
-    # Random Forest
-    if type == 2:
-        pass        
+
+    y_pred = model.predict(X_Test)
+    error = sqrt(mean_squared_error(Y_Test,y_pred))
+    print(error)
+    
     return model
     
