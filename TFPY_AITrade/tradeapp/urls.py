@@ -8,7 +8,8 @@ from .views import (
     # MarketListView,
     # SymbolDetailView,
     answer, 
-    createModel
+    createModel,
+    predict
 )
 
 app_name = 'tradeapp'
@@ -18,5 +19,6 @@ urlpatterns = [
     path('markets/', markets_view, name='markets'),
     path('markets/<sbl>/', symbol_view, name='symbolWeek'), 
     path('ajax/get_response/', answer, name='get_response'),
-    path('markets/<sbl>/create-model/',createModel, name='create-model')
+    path('markets/<sbl>/create-model/',createModel, name='create-model'),
+    path('markets/<sbl>/prediction/',predict, name='predict')
 ]

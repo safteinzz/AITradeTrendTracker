@@ -12,15 +12,14 @@ from talib import BBANDS
 
 
 import os
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
-from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import confusion_matrix, precision_score, recall_score, accuracy_score
-
-from sklearn.neighbors import KNeighborsRegressor
 from math import sqrt
+
+
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, accuracy_score
+from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_squared_error 
 
 from .models import New

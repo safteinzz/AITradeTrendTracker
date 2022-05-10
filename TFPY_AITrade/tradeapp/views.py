@@ -8,12 +8,13 @@ from django.views.generic import ListView, DetailView
 from django.http import HttpResponseRedirect
 from django.http import HttpResponse
 from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, splitRange, scalator, ml_launch
-from .models import New
-
+from .models import AiModel
+from django.conf import settings
 
 
 from textblob import TextBlob
-
+import pickle
+import os
 
 
 
@@ -55,6 +56,9 @@ def symbol_view(request, sbl):
 
     algorithms = ['Neural network', 'K-NN']
 
+
+    models = AiModel.objects.filter(ticker=sbl)
+
     data = {
         'sbl' : sbl,
         'candleData' : candleData,
@@ -63,7 +67,8 @@ def symbol_view(request, sbl):
         'otherSelection' : otherSelection,
         'latestNews' : latestNews,
         'indicators' : indicators,
-        'algorithms' : algorithms
+        'algorithms' : algorithms,
+        'models' : models
     }
 
     return render(request, 'tradeapp/symbol.html', data)
@@ -104,15 +109,26 @@ def answer(request):
 def createModel(request, sbl):
     if request.POST.get('action') == 'create-model':
         algorithm = int(request.POST.get('algorithm'))
+        print(algorithm)
         if(algorithm > 0):
             rangeIni = datetime.strptime(request.POST.get('rangeIni'), '%Y-%m-%d')
             rangeEnd = datetime.strptime(request.POST.get('rangeEnd'), '%Y-%m-%d')
             scalate = request.POST.get('scalate')
             benchmark = request.POST.get('benchmark')
+            modelName = request.POST.get('model')
+            modelDesc = request.POST.get('description')
+
+
+
+            BB = request.POST.get('BB')
+            DEMA = request.POST.get('DEMA')
+            RSI = request.POST.get('RSI')
+            MACD = request.POST.get('MACD')
+
             
             df = get_dataYahoo(ticker = benchmark, scaled = False, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
             # Add indicators
-            df = addIndicators(df, BB = True)
+            df = addIndicators(df, BB = BB)
             # Add news if news
             if (request.POST.get('news')):
                 dfDateRanges = splitRange(rangeIni,rangeEnd)
@@ -149,8 +165,42 @@ def createModel(request, sbl):
             if scalate:
                 scalator(df,['date', 'polarity', 'subjectivity'])
 
-            ml_launch(df, type = algorithm, epochs=100, batch_size = 3)
+            # https://stackoverflow.com/questions/46830427/save-classifier-to-postrgesql-database-in-scikit-learn
+            model = ml_launch(df, type = algorithm, epochs=100, batch_size = 3)
+
+            # El modelo puede tener nombres repetidos, eso = bug mirarlo antes, 
+            filename =  str(modelName) + ".h5"
+            modelPath = os.path.join(settings.MEDIA_ROOT, 'models', filename)
+            model.save(modelPath)
+            # https://keras.io/getting_started/faq/#what-are-my-options-for-saving-models
+            # pickledModel = pickle.dumps(model)
+            newModel = AiModel(
+                name = modelName,
+                desc = modelDesc,
+                ticker = benchmark,
+                model = modelPath,
+                scaled = scalate,
+                BB = BB,
+                DEMA = DEMA,
+                RSI = RSI,
+                MACD = MACD
+                )
+            newModel.save()
+            
         else:
             print('no selected dar error')
         
+    return HttpResponse('')
+
+def predict(request, sbl):
+    if request.GET.get('action') == 'predict':
+        benchmark = request.GET.get('benchmark')
+        idModel = request.GET.get('modelSelected')
+        model = AiModel.objects.filter(id=idModel)
+        print(model[0].desc)
+        # tengo el modelo
+        # hay que analizar el modelo (scaled, bb, etc..)
+        # sacar el ultimo dia de datos del ticker seleccionado
+        #     (mirar si podemos tomar en cuento los dias anteriores tambien)
+        # hacer predict
     return HttpResponse('')

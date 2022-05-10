@@ -161,7 +161,9 @@ Market {{sbl}}
 			<label for="predictInputModel" class="fs-5">Model</label>
 			<select name="predictInputModel" id="predictInputModel" class="form-control form-select">
 				<option selected>Choose...</option>
-				<option value="...">...</option>
+				{% for model in models %}
+					<option value="{{model.id}}">{{model}}</option>
+				{% endfor %}
 			</select>
 			</div>
 
@@ -199,7 +201,7 @@ Market {{sbl}}
 				<option value="{{sbl}}" selected>{{sbl}}</option>
 				<option>...</option>
 			</select>			
-			<input class="btn btn-primary w-100 my-4" type="submit" value="Submit">
+			<input id="submitPrediction" class="btn btn-primary w-100 my-4" type="submit" value="Submit">
 		</div>
 	</div>
 	
@@ -315,7 +317,7 @@ https://tradingview.github.io/lightweight-charts/docs
 </script>
 <script type="text/javascript"> //https://stackoverflow.com/questions/45906858/update-dom-without-reloading-the-page-in-django
 $("#dateRangeSelector a").click(function (){
-	var endpoint = '/ajax/get_response';
+	const endpoint = '/ajax/get_response';
 	var period = $(this).html();
 	var symbol = $('#symbol').html();
 	$.ajax({
@@ -337,8 +339,8 @@ $("#dateRangeSelector a").click(function (){
       });
 });
 
-var formData = new FormData();
 $("#submitModelCreation").click(function (){
+	var formData = new FormData();
 	formData.append('model', $('#creationInputModelName').val());
 	formData.append('description', $('#creationInputModelDescription').val());
 
@@ -360,8 +362,34 @@ $("#submitModelCreation").click(function (){
 	formData.append('algorithm', $( "#creationInputAlgorithm option:selected" ).index());
 	formData.append('ensemble', $( "#creationInputEnsemble option:selected" ).text());
 
+	if ($('#creationInputIndicatorBB').is(':checked')){
+		formData.append('BB', 'True');
+	} else {
+		formData.append('BB', 'False');
+	}
+
+	if ($('#creationInputIndicatorDEMA').is(':checked')){
+		formData.append('DEMA', 'True');
+	} else {
+		formData.append('DEMA', 'False');
+	}
+
+	if ($('#creationInputIndicatorRSI').is(':checked')){
+		formData.append('RSI', 'True');
+	} else {
+		formData.append('RSI', 'False');
+	}
+
+	if ($('#creationInputIndicatorMACD').is(':checked')){
+		formData.append('MACD', 'True');
+	} else {
+		formData.append('MACD', 'False');
+	}
+
 	if ($('#creationInputScalateCheck').is(':checked')){
 		formData.append('scalate', 'True');
+	} else {
+		formData.append('scalate', 'False');
 	}
 
 	formData.append('action', 'create-model');
@@ -385,8 +413,25 @@ $("#submitModelCreation").click(function (){
       });
 });
 
-
-
+$("#submitPrediction").click(function (){
+	const endpoint = 'prediction/';
+	$.ajax({
+		method: "GET",
+        url: endpoint,
+        data: {
+          'benchmark': $( "#predictInputBenchmark option:selected" ).text(),
+		  'modelSelected': $( "#predictInputModel option:selected" ).val(),
+		  'action': 'predict'
+        },
+        dataType: 'json',
+        success: function (){
+			alert('success!')
+		},
+		error: function(xhr, errmsg, err) {
+			console.log(xhr.status + ":" + xhr.responseText)
+		}
+      });
+});
 
 inputTags(document.querySelector('.inputCell'), [],[]);
 

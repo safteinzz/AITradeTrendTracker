@@ -14,3 +14,18 @@ class New(models.Model):
 
     def __str__(self):
         return self.title
+
+class AiModel(models.Model):
+    name = models.CharField(max_length=100, null=True)
+    desc = models.CharField(max_length=400, null=True)
+    ticker = models.CharField(max_length=50)
+    # model = models.BinaryField()
+    model = models.FileField(upload_to='models')
+    scaled = models.BooleanField(default=False)
+    BB = models.BooleanField(default=False)
+    DEMA = models.BooleanField(default=False)
+    RSI = models.BooleanField(default=False)
+    MACD = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return self.name
