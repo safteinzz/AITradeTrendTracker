@@ -155,7 +155,8 @@ def newsChecker(sbl):
     if len(news) < 3:
         listReturn = newsExtract(sbl, dateToday, dateDaysAgo, save = True)
     else:
-        listReturn = New.objects.filter(ticker=sbl).filter(pk__gte=New.objects.count() - 3)
+        listReturn = New.objects.filter(ticker=sbl).order_by('-date')[:3][::-1]
+        # .filter(pk__gte=New.objects.count() - 3)
     return listReturn
 
 def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOfNews = 3, save = False):

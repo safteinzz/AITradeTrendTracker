@@ -49,7 +49,6 @@ def symbol_view(request, sbl):
     ]
 
     latestNews = newsChecker(sbl)
-    
     indicators = pd.DataFrame()
     indicators['full'] = ['Bollinger Bands', 'Double Exponential Moving Average', 'Relative Strength Index', 'Moving Average Convergence Divergence']
     indicators['acronym'] = ['BB', 'DEMA', 'RSI','MACD']
