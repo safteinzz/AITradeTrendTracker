@@ -15,7 +15,7 @@ import os
 from math import sqrt
 
 
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, accuracy_score
@@ -50,6 +50,8 @@ def scalator(df,unDesiredColumns):
         else:
             pass
 
+    return column_scaler
+
 def shuffle_in_unison(a, b):
     # shuffle two arrays in the same way
     state = np.random.get_state()
@@ -57,7 +59,7 @@ def shuffle_in_unison(a, b):
     np.random.set_state(state)
     np.random.shuffle(b)
 
-def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffle = True, period = 0, interval = None, rangeIni = False, rangeEnd = False):
+def get_dataYahoo(ticker, scaled = False, unDesiredColumns = False, dropTicker = False, news = True, shuffle = True, period = 0, interval = None, rangeIni = False, rangeEnd = False, lookup = 1):
     """Method for the data extraction of the selected ticker with modified results based on different parameters
 
     Args:
@@ -66,7 +68,7 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
         dropTicker (bool, optional): Remove ticker column from dataframe. Defaults to False.
         news (bool, optional): Adquire news for training. Defaults to True.
         shuffle (bool, optional): Shuffle the data or not. Defaults to True.
-        period (int, optional): Period of data search (0 week, 1 month, 2 year, 3 all). Defaults to 1.
+        period (int, optional): Period of data search (0 week, 1 month, 2 year, 3 all, 4 lookup based). Defaults to 1.
         interval (_type_, optional): Interval of the data (weekly, monthly). Defaults to None.
 
     Raises:
@@ -77,10 +79,9 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
     """
     # <!------------------- Extraction ---------------------->
     # http://theautomatic.net/yahoo_fin-documentation/#methods
-    #           
     if isinstance(ticker, str):
         if rangeIni and rangeEnd:
-            df = si.get_data(ticker, start_date = rangeIni , end_date = rangeEnd)
+            df = si.get_data(ticker, start_date = rangeIni, end_date = rangeEnd)
         elif period != 3:
             endDateRange = date.today()
             if period == 0:
@@ -89,7 +90,9 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
                 startDateRange = endDateRange - pd.DateOffset(months=6)
             elif period == 2:
                 startDateRange = endDateRange - pd.DateOffset(years=1)
-            df = si.get_data(ticker, start_date = startDateRange , end_date = endDateRange)
+            elif period == 4:
+                startDateRange = endDateRange - pd.DateOffset(days=(lookup * 7) / 4)
+            df = si.get_data(ticker, start_date = startDateRange, end_date = endDateRange)
         else:
             df = si.get_data(ticker, interval)
     elif isinstance(ticker, pd.DataFrame):
@@ -112,10 +115,6 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
     if dropTicker:
         del df["ticker"]
 
-    # Scale values 0-1 (better perfomance)
-    if scaled:
-        scalator(df)
-
     # Add news (deberia de sacar positividad de las noticias medias en referencia al tema para agregarlo como positividad de las noticias como linea adicional)
     if news:
         pass
@@ -123,6 +122,10 @@ def get_dataYahoo(ticker, scaled = True, dropTicker = False, news = True, shuffl
     # Shuffle data
     if shuffle:
         pass
+
+    # Scale values 0-1 (better perfomance)
+    if scaled and unDesiredColumns:
+        scalator(df, unDesiredColumns)
 
     return df
 
@@ -155,7 +158,7 @@ def newsChecker(sbl):
     if len(news) < 3:
         listReturn = newsExtract(sbl, dateToday, dateDaysAgo, save = True)
     else:
-        listReturn = New.objects.filter(ticker=sbl).order_by('-date')[:3][::-1]
+        listReturn = New.objects.filter(ticker=sbl).order_by('-date')[:3][::-1] #https://stackoverflow.com/questions/20555673/django-query-get-last-n-records
         # .filter(pk__gte=New.objects.count() - 3)
     return listReturn
 
@@ -190,10 +193,9 @@ def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOf
         urlParsed = urlparse(listNews[index]['link'])
         provider = re.sub('www.', '',urlParsed.netloc)
         provider = re.sub('\..*', '',provider)
-        # listReturn.append(New(title = listNews[index]['title'],date = listNews[index]['datetime'],desc = listNews[index]['desc'],link = listNews[index]['link'],provider = provider))
+        # If we got no date, the new is pretty much useless
         if listNews[index]['datetime']:
             listReturn.append([listNews[index]['title'],listNews[index]['datetime'].date(),listNews[index]['desc'],listNews[index]['link'],provider])  
-        # dfNews = pd.DataFrame(listReturn, columns=["title", "date", "desc", "link", "provider"])
     if save:
         model_instances = [ New(
             title = new[0],
@@ -217,7 +219,7 @@ def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):
         MACD (bool, optional): _description_. Defaults to False.
     """
     if BB:
-        df['upperband'], df['middleband'], df['lowerband'] = BBANDS(df['close'], timeperiod=5, nbdevup=2, nbdevdn=2, matype=0)
+        df['upperband'], df['middleband'], df['lowerband'] = BBANDS(df['close'], timeperiod=2, nbdevup=2, nbdevdn=2, matype=0)
     
     # Clean
     df = df.dropna()
@@ -242,10 +244,10 @@ def deep_learning_model_creation(X_Train, layers = 2, optimizer="rmsprop", units
     return model
 
 
-def ml_launch(df, epochs = 100, batch_size = 32, type=0, shuffle = False): #https://www.youtube.com/watch?v=6_2hzRopPbQ
-    # poner el lookout step como la cantidad de dias que se quiere mirar en el futuro, poner una linea y a tomar por culo
-    
-    df = df.assign(future=df['adjclose'].shift(-1))
+def ml_launch(df, lookup = 1, epochs = 100, batch_size = 32, type=0, shuffle = False): #https://www.youtube.com/watch?v=6_2hzRopPbQ
+
+    # poner el lookout step como la cantidad de dias que se quiere mirar en el futuro, poner una linea y a tomar por culo    
+    df = df.assign(future=df['adjclose'].shift(-lookup))
     df.dropna(subset=['future'], how='all', inplace=True)
     # df['rising'] = df.apply(lambda x : 1 if x['future'] >= x['adjclose'] else 0, axis=1)
     df = df.drop(columns=['date'])

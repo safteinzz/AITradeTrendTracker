@@ -13,9 +13,9 @@ from django.conf import settings
 
 
 from textblob import TextBlob
-import pickle
 import os
-
+from tensorflow.keras.models import load_model
+from pickle import dump, load #https://machinelearningmastery.com/how-to-save-and-load-models-and-data-preparation-in-scikit-learn-for-later-use/
 
 
 import numpy as np
@@ -108,10 +108,10 @@ def answer(request):
 def createModel(request, sbl):
     if request.POST.get('action') == 'create-model':
         algorithm = int(request.POST.get('algorithm'))
-        print(algorithm)
         if(algorithm > 0):
             rangeIni = datetime.strptime(request.POST.get('rangeIni'), '%Y-%m-%d')
             rangeEnd = datetime.strptime(request.POST.get('rangeEnd'), '%Y-%m-%d')
+            lookup = int(request.POST.get('lookup'))
             scalate = request.POST.get('scalate')
             benchmark = request.POST.get('benchmark')
             modelName = request.POST.get('model')
@@ -125,7 +125,7 @@ def createModel(request, sbl):
             MACD = request.POST.get('MACD')
 
             
-            df = get_dataYahoo(ticker = benchmark, scaled = False, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
+            df = get_dataYahoo(ticker = benchmark, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
             # Add indicators
             df = addIndicators(df, BB = BB)
             # Add news if news
@@ -160,35 +160,40 @@ def createModel(request, sbl):
 
                 # Drop NaN values
                 df.dropna(subset=['polarity'], how='all', inplace=True)
+
             # Scalate results
             if scalate:
-                scalator(df,['date', 'polarity', 'subjectivity'])
+                scaler = scalator(df,['date', 'polarity', 'subjectivity'])['adjclose']
 
-            # https://stackoverflow.com/questions/46830427/save-classifier-to-postrgesql-database-in-scikit-learn
-            model = ml_launch(df, type = algorithm, epochs=100, batch_size = 3)
+            # Check if data can fit the lookup
+            if(len(df) >= (lookup * 2)): #Half the data is lost as NaNs since there's no prediction possible for them, we need double the data
+                model = ml_launch(df, lookup = lookup, type = algorithm, epochs=100, batch_size = 3)
 
-            # El modelo puede tener nombres repetidos, eso = bug mirarlo antes, 
-            filename =  str(modelName) + ".h5"
-            modelPath = os.path.join(settings.MEDIA_ROOT, 'models', filename)
-            model.save(modelPath)
-            # https://keras.io/getting_started/faq/#what-are-my-options-for-saving-models
-            # pickledModel = pickle.dumps(model)
-            newModel = AiModel(
-                name = modelName,
-                desc = modelDesc,
-                ticker = benchmark,
-                model = modelPath,
-                scaled = scalate,
-                BB = BB,
-                DEMA = DEMA,
-                RSI = RSI,
-                MACD = MACD
-                )
-            newModel.save()
-            
+                # !!!!!!!!!!El modelo puede tener nombres repetidos, eso = bug mirarlo antes!!!!!!!!!!!!!!!
+                # Model save and load to database
+                filename =  str(modelName)
+                modelPath = os.path.join(settings.MEDIA_ROOT, 'models', filename + ".h5")
+                model.save(modelPath)
+                scalerPath = os.path.join(settings.MEDIA_ROOT, 'scalers', filename + ".pkl")
+                dump(scaler, open(scalerPath, 'wb'))
+                newModel = AiModel(
+                    name = modelName,
+                    desc = modelDesc,
+                    ticker = benchmark,
+                    lookup = lookup,
+                    model = modelPath,
+                    scaler = scalerPath,
+                    scaled = scalate,
+                    BB = BB,
+                    DEMA = DEMA,
+                    RSI = RSI,
+                    MACD = MACD
+                    )
+                newModel.save()
+            else:
+                print('There too low data for this lookup step')  
         else:
-            print('no selected dar error')
-        
+            print('No algorithm selected')
     return HttpResponse('')
 
 def predict(request, sbl):
@@ -196,10 +201,23 @@ def predict(request, sbl):
         benchmark = request.GET.get('benchmark')
         idModel = request.GET.get('modelSelected')
         model = AiModel.objects.filter(id=idModel)
-        print(model[0].desc)
-        # tengo el modelo
-        # hay que analizar el modelo (scaled, bb, etc..)
-        # sacar el ultimo dia de datos del ticker seleccionado
-        #     (mirar si podemos tomar en cuento los dias anteriores tambien)
-        # hacer predict
-    return HttpResponse('')
+
+        # Extract data based on the lookup (we need last values, equal in number to lookup, more data is useless)
+        df = get_dataYahoo(ticker = benchmark, dropTicker = True, period = 4, lookup = model[0].lookup)
+        df = addIndicators(df, BB = model[0].BB)
+        df = df.drop(columns=['date'])
+
+        # Scalate results        
+        if model[0].scaled:
+            scalator(df,['polarity', 'subjectivity'])
+        loadedModel = load_model(str(model[0].model))
+        print(df.iloc[-model[0].lookup:])
+        prediction = loadedModel.predict(df.iloc[-model[0].lookup:])
+        # HAY QUE AGREGAR EL ULTIMO VALOR PARA QUE LA RAYA QUEDE MAS CHULA
+        scaler = load(open(str(model[0].scaler), 'rb'))
+        inversed = scaler.inverse_transform(prediction)
+        print(inversed)
+        data = {
+            'prediction': inversed,
+        }
+    return JsonResponse(data)

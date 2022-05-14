@@ -56,6 +56,11 @@ Market {{sbl}}
 				<textarea class="form-control" name="creationInputModelDescription" id="creationInputModelDescription" rows="3" placeholder="Model description"></textarea>
 			</div>
 
+			<div class="form-group pb-3">
+				<label for="creationInputLookup" class="fs-5">Lookup</label>
+				<input type="number" class="form-control" name="creationInputLookup" id="creationInputLookup" value="1" min="1" max="180">
+			</div>
+
 			<div class="form-group pb-2">
 				<div class="row align-items-center">
 					<div class="col-sm-2">
@@ -152,7 +157,7 @@ Market {{sbl}}
 </form>
 
 {% comment %} User prediccion form {% endcomment %}
-<form class="collapse" id="collapsePredictionSettings" method="POST">
+<form class="collapse" id="collapsePredictionSettings">
 	{% csrf_token %}
 	<input type="hidden" name="formtype" value="formPrediction">
 	<div class="row">
@@ -343,6 +348,8 @@ $("#submitModelCreation").click(function (){
 	var formData = new FormData();
 	formData.append('model', $('#creationInputModelName').val());
 	formData.append('description', $('#creationInputModelDescription').val());
+	formData.append('lookup', $('#creationInputLookup').val());
+	creationInputLookup
 
 	myDate = new Date($('#creationInputIniRange').val());
 	formData.append('rangeIni',  $('#creationInputIniRange').val());
