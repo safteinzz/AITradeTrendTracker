@@ -16,7 +16,9 @@ from textblob import TextBlob
 import os
 from tensorflow.keras.models import load_model
 from pickle import dump, load #https://machinelearningmastery.com/how-to-save-and-load-models-and-data-preparation-in-scikit-learn-for-later-use/
+import json
 
+import time
 
 import numpy as np
 import pandas as pd
@@ -91,7 +93,6 @@ def answer(request):
     otherSelection = pd.DataFrame(data = otherSelection, columns = ['value'])
     otherSelection = otherSelection.to_dict(orient='records')
 
-    print(otherSelection)
     # Extract data
     tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = period)
     # LightweightCharts Fix
@@ -168,12 +169,21 @@ def createModel(request, sbl):
             # Check if data can fit the lookup
             if(len(df) >= (lookup * 2)): #Half the data is lost as NaNs since there's no prediction possible for them, we need double the data
                 model = ml_launch(df, lookup = lookup, type = algorithm, epochs=100, batch_size = 3)
-
                 # !!!!!!!!!!El modelo puede tener nombres repetidos, eso = bug mirarlo antes!!!!!!!!!!!!!!!
                 # Model save and load to database
                 filename =  str(modelName)
-                modelPath = os.path.join(settings.MEDIA_ROOT, 'models', filename + ".h5")
-                model.save(modelPath)
+
+                # Neural networks save differently
+                if (algorithm == 1):
+                    modelPath = os.path.join(settings.MEDIA_ROOT, 'models', filename + ".h5")
+                    model.save(modelPath)
+                    keras = True
+                else:
+                    modelPath = os.path.join(settings.MEDIA_ROOT, 'models', filename + ".pkl")
+                    dump(model, open(modelPath, 'wb'))
+                    keras = False
+                
+                # Save scaler for future inversion
                 scalerPath = os.path.join(settings.MEDIA_ROOT, 'scalers', filename + ".pkl")
                 dump(scaler, open(scalerPath, 'wb'))
                 newModel = AiModel(
@@ -183,6 +193,7 @@ def createModel(request, sbl):
                     lookup = lookup,
                     model = modelPath,
                     scaler = scalerPath,
+                    keras = keras,
                     scaled = scalate,
                     BB = BB,
                     DEMA = DEMA,
@@ -191,12 +202,12 @@ def createModel(request, sbl):
                     )
                 newModel.save()
             else:
-                print('There too low data for this lookup step')  
+                print('There is too low data for this lookup step')  
         else:
             print('No algorithm selected')
     return HttpResponse('')
 
-def predict(request, sbl):
+def predict(request):
     if request.GET.get('action') == 'predict':
         benchmark = request.GET.get('benchmark')
         idModel = request.GET.get('modelSelected')
@@ -205,19 +216,50 @@ def predict(request, sbl):
         # Extract data based on the lookup (we need last values, equal in number to lookup, more data is useless)
         df = get_dataYahoo(ticker = benchmark, dropTicker = True, period = 4, lookup = model[0].lookup)
         df = addIndicators(df, BB = model[0].BB)
+
+        # Create result dataframe
+        dfPred = df.iloc[-1:]
+        dfPred = dfPred.filter(['adjclose', 'date'])
+        dfPred = dfPred.rename(columns={"date":"time"})
+        dfPred = dfPred.rename(columns={"adjclose":"value"})
+
         df = df.drop(columns=['date'])
 
         # Scalate results        
         if model[0].scaled:
             scalator(df,['polarity', 'subjectivity'])
-        loadedModel = load_model(str(model[0].model))
-        print(df.iloc[-model[0].lookup:])
+            # Load scaler      
+            scaler = load(open(str(model[0].scaler), 'rb'))
+
+        # Load model
+        if(model[0].keras):
+            loadedModel = load_model(str(model[0].model))  
+        else:
+            loadedModel = load(open(str(model[0].model), 'rb'))
+
+        # Predict and inverse result
         prediction = loadedModel.predict(df.iloc[-model[0].lookup:])
-        # HAY QUE AGREGAR EL ULTIMO VALOR PARA QUE LA RAYA QUEDE MAS CHULA
-        scaler = load(open(str(model[0].scaler), 'rb'))
-        inversed = scaler.inverse_transform(prediction)
-        print(inversed)
+
+        if model[0].scaled:
+            if not model[0].keras:
+                prediction = np.array(prediction).reshape(len(prediction),1) # The size of the prediction must be shape [[1],[2]]
+            inversed = scaler.inverse_transform(prediction)
+            prediction = inversed
+
+        # Fix type
+        dfPred['time'] = pd.to_datetime(dfPred['time'])
+
+        # https://stackoverflow.com/questions/72247655/extend-a-dataframe-with-values-and-next-dates/
+        df1 = pd.DataFrame({'value': np.array(prediction).flatten(),
+                            'time': pd.date_range(dfPred['time'].max(), periods=len(prediction)+1, 
+                                                freq='D', inclusive='right')})
+
+        out = pd.concat([dfPred, df1], ignore_index=True)
+
+        out['time'] = out['time'] + pd.DateOffset(hours=12) # Java needs hours above the 00 to be able to detect it as a next day
+
+        prediction = out.to_dict(orient='records')
         data = {
-            'prediction': inversed,
+            'prediction' : prediction,
         }
     return JsonResponse(data)

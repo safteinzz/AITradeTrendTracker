@@ -157,19 +157,17 @@ Market {{sbl}}
 </form>
 
 {% comment %} User prediccion form {% endcomment %}
-<form class="collapse" id="collapsePredictionSettings">
-	{% csrf_token %}
-	<input type="hidden" name="formtype" value="formPrediction">
+<div class="collapse" id="collapsePredictionSettings">
 	<div class="row">
 		<div class="col-sm-3">
 			<div class="form-group pb-3">
-			<label for="predictInputModel" class="fs-5">Model</label>
-			<select name="predictInputModel" id="predictInputModel" class="form-control form-select">
-				<option selected>Choose...</option>
-				{% for model in models %}
+				<label for="predictInputModel" class="fs-5">Model</label>
+				<select name="predictInputModel" id="predictInputModel" class="form-control form-select">
+					<option selected>Choose...</option>
+					{% for model in models %}
 					<option value="{{model.id}}">{{model}}</option>
-				{% endfor %}
-			</select>
+					{% endfor %}
+				</select>
 			</div>
 
 			{% comment %} <div class="row align-items-center pb-3">
@@ -205,12 +203,11 @@ Market {{sbl}}
 			<select name="predictInputBenchmark" id="predictInputBenchmark" class="form-control form-select">
 				<option value="{{sbl}}" selected>{{sbl}}</option>
 				<option>...</option>
-			</select>			
+			</select>
 			<input id="submitPrediction" class="btn btn-primary w-100 my-4" type="submit" value="Submit">
 		</div>
 	</div>
-	
-</form>
+</div>
 
 {% comment %} Chart {% endcomment %}
 <div class="my-4 w-100" id="TVChart" width="900" height="380"></div>
@@ -269,7 +266,7 @@ https://tradingview.github.io/lightweight-charts/docs
 <script type="text/javascript">
 	function chartSetter(chart, candleData, volumeData, candlestickSeries, volumeSeries) {
 		candlestickSeries.setData(candleData);
-		volumeSeries.setData(volumeData);
+		volumeSeries.setData(volumeData);		
 		chart.timeScale().fitContent();
 	}
 	parent = document.getElementById('TVChart')
@@ -298,6 +295,9 @@ https://tradingview.github.io/lightweight-charts/docs
 	});
 	var candlestickSeries = chart.addCandlestickSeries(
 	);
+
+	var areaSeries = chart.addAreaSeries();
+
 	var volumeSeries = chart.addHistogramSeries({
 		color: '#26a69a',
 		priceFormat: {
@@ -310,6 +310,7 @@ https://tradingview.github.io/lightweight-charts/docs
 		},
 	});
 
+	
 	chartSetter(chart, candleData = {{candleData|safe}}, volumeData = {{volumeData|safe}}, candlestickSeries, volumeSeries);
 
 	// Responsive chart https://stackoverflow.com/questions/57898720/how-to-create-responsive-tradingview-lightweight-chart
@@ -322,7 +323,7 @@ https://tradingview.github.io/lightweight-charts/docs
 </script>
 <script type="text/javascript"> //https://stackoverflow.com/questions/45906858/update-dom-without-reloading-the-page-in-django
 $("#dateRangeSelector a").click(function (){
-	const endpoint = '/ajax/get_response';
+	const endpoint = '/ajax/dataSwap';
 	var period = $(this).html();
 	var symbol = $('#symbol').html();
 	$.ajax({
@@ -421,7 +422,7 @@ $("#submitModelCreation").click(function (){
 });
 
 $("#submitPrediction").click(function (){
-	const endpoint = 'prediction/';
+	const endpoint = '/ajax/prediction';
 	$.ajax({
 		method: "GET",
         url: endpoint,
@@ -431,10 +432,13 @@ $("#submitPrediction").click(function (){
 		  'action': 'predict'
         },
         dataType: 'json',
-        success: function (){
-			alert('success!')
+        success: function (data){
+			console.log(data.prediction);
+			areaSeries.setData(data.prediction);			
+			chart.timeScale().fitContent();
 		},
 		error: function(xhr, errmsg, err) {
+			alert('error during the prediction, contact administrator')
 			console.log(xhr.status + ":" + xhr.responseText)
 		}
       });

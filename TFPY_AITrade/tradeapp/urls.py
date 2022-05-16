@@ -18,7 +18,7 @@ urlpatterns = [
     path('', home_view, name='home'),
     path('markets/', markets_view, name='markets'),
     path('markets/<sbl>/', symbol_view, name='symbolWeek'), 
-    path('ajax/get_response/', answer, name='get_response'),
-    path('markets/<sbl>/create-model/',createModel, name='create-model'),
-    path('markets/<sbl>/prediction/',predict, name='predict')
+    path('markets/<sbl>/create-model/',createModel, name='create-model'),    
+    path('ajax/dataSwap/', answer, name='get_response'),
+    path('ajax/prediction',predict, name='predict'),
 ]

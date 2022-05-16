@@ -226,7 +226,6 @@ def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):
     df = df.reset_index(drop=True)
     return df
     
-
 def deep_learning_model_creation(X_Train, layers = 2, optimizer="rmsprop", units=256, dropout=0.2, loss="mean_absolute_error"):
     # https://towardsdatascience.com/predicting-stock-prices-using-a-keras-lstm-model-4225457f0233
     model = Sequential()
@@ -242,7 +241,6 @@ def deep_learning_model_creation(X_Train, layers = 2, optimizer="rmsprop", units
     model.add(Dense(1, activation="linear"))
     model.compile(optimizer=optimizer,loss=loss)
     return model
-
 
 def ml_launch(df, lookup = 1, epochs = 100, batch_size = 32, type=0, shuffle = False): #https://www.youtube.com/watch?v=6_2hzRopPbQ
 
