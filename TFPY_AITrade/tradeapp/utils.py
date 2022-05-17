@@ -14,6 +14,8 @@ from talib import BBANDS
 import os
 from math import sqrt
 
+from textblob import TextBlob
+
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
@@ -25,19 +27,38 @@ from sklearn.metrics import mean_squared_error
 from .models import New
 
 def splitRange(rangeIni,rangeEnd):
+    # Define start and end
     start = pd.Timestamp(rangeIni)
     end = pd.Timestamp(rangeEnd)
-    parts = list(pd.date_range(start, end, freq='M')) 
 
+    # Set frequency based on difference
+    diff = pd.Timedelta(end - start).days
+    if diff < 5:
+        freq = 'D'
+    elif diff < 10:
+        freq = '2D'
+    elif diff < 20:
+        freq = '5D'
+    elif diff < 30:
+        freq = '7D'
+    elif diff < 60:
+        freq = '14D'
+    else:
+        freq = 'M'
+
+    # Split the date range based in frequency
+    parts = list(pd.date_range(start, end, freq=freq)) 
+
+    # Fit initial and last part
     if start != parts[0]:
         parts.insert(0, start)
     if end != parts[-1]:
         parts.append(end)
 
+    # Make it a range
     parts[0] -= pd.Timedelta('1d')
     pairs = zip(map(lambda d: d + pd.Timedelta('1d'), parts[:-1]), parts[1:]) #Slice last row for convenience, and first row for make the ranges, and zip it
     dfDateRanges = pd.DataFrame(pairs, columns = ['ini', 'end'])
-    # pairs_str = list(map(lambda t: t[0].strftime('%Y-%m-%d') + ' - ' + t[1].strftime('%Y-%m-%d'), pairs))
     return dfDateRanges
 
 def scalator(df,unDesiredColumns):
@@ -91,7 +112,7 @@ def get_dataYahoo(ticker, scaled = False, unDesiredColumns = False, dropTicker =
             elif period == 2:
                 startDateRange = endDateRange - pd.DateOffset(years=1)
             elif period == 4:
-                startDateRange = endDateRange - pd.DateOffset(days=(lookup * 7) / 4)
+                startDateRange = endDateRange - pd.DateOffset(days=lookup * 12)
             df = si.get_data(ticker, start_date = startDateRange, end_date = endDateRange)
         else:
             df = si.get_data(ticker, interval)
@@ -207,6 +228,40 @@ def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOf
         ) for new in listReturn ]
         New.objects.bulk_create(model_instances)
     return listReturn
+
+def newsPLNFitDF(df, benchmark, rangeIni, rangeEnd):
+    dfDateRanges = splitRange(rangeIni,rangeEnd)
+
+    listForDF = []
+    # ESTO HAY QUE MEJORARLO ITER ROWS ES MALA IDEA PERO NO SE COMO HACERLO AHORA MISMO
+    for index, r in dfDateRanges.iterrows():
+        listForDF.extend(newsExtract(benchmark,r['ini'],r['end'], all = True))
+    dfNewsPLN = pd.DataFrame(listForDF, columns=["title", "date", "desc", "link", "provider"])
+
+    # Make PLN of description
+    dfNewsPLN['polarity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.polarity)
+    dfNewsPLN['subjectivity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.subjectivity)
+
+    # Drop useless columns
+    dfNewsPLN = dfNewsPLN.drop(columns=['title', 'desc', 'link', 'provider'])
+
+    # Do a mean of values
+    dfNewsPLN = dfNewsPLN.groupby('date', as_index = False).mean()
+
+    # Make date same type for left join
+    df['date'] = pd.to_datetime(df['date'])
+    dfNewsPLN['date'] = pd.to_datetime(dfNewsPLN['date'])
+
+    # Do left join
+    df = df.merge(dfNewsPLN, on=['date'], how="left")
+
+    # Fill nan values with latest values
+    df = df.ffill()
+
+    # Drop NaN values
+    df.dropna(subset=['polarity'], how='all', inplace=True)
+
+    return df
 
 def addIndicators(df, BB = False, DEMA = False, RSI = False, MACD = False):
     """https://mrjbq7.github.io/ta-lib/

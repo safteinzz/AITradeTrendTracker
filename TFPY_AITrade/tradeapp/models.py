@@ -23,6 +23,7 @@ class AiModel(models.Model):
     model = models.FileField(upload_to='models')
     scaler = models.FileField(upload_to='scalers')
     keras = models.BooleanField(default=False)
+    news = models.BooleanField(default=False)
     scaled = models.BooleanField(default=False)
     BB = models.BooleanField(default=False)
     DEMA = models.BooleanField(default=False)

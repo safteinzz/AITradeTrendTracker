@@ -7,12 +7,12 @@ from django.shortcuts import render
 from django.views.generic import ListView, DetailView
 from django.http import HttpResponseRedirect
 from django.http import HttpResponse
-from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, splitRange, scalator, ml_launch
+from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, scalator, ml_launch, newsPLNFitDF
 from .models import AiModel
 from django.conf import settings
 
 
-from textblob import TextBlob
+
 import os
 from tensorflow.keras.models import load_model
 from pickle import dump, load #https://machinelearningmastery.com/how-to-save-and-load-models-and-data-preparation-in-scikit-learn-for-later-use/
@@ -110,6 +110,7 @@ def createModel(request, sbl):
     if request.POST.get('action') == 'create-model':
         algorithm = int(request.POST.get('algorithm'))
         if(algorithm > 0):
+            # Get POST data
             rangeIni = datetime.strptime(request.POST.get('rangeIni'), '%Y-%m-%d')
             rangeEnd = datetime.strptime(request.POST.get('rangeEnd'), '%Y-%m-%d')
             lookup = int(request.POST.get('lookup'))
@@ -117,54 +118,24 @@ def createModel(request, sbl):
             benchmark = request.POST.get('benchmark')
             modelName = request.POST.get('model')
             modelDesc = request.POST.get('description')
-
-
-
             BB = request.POST.get('BB')
             DEMA = request.POST.get('DEMA')
             RSI = request.POST.get('RSI')
             MACD = request.POST.get('MACD')
 
-            
+            # Get stock data
             df = get_dataYahoo(ticker = benchmark, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
+
             # Add indicators
             df = addIndicators(df, BB = BB)
+
             # Add news if news
             if (request.POST.get('news')):
-                dfDateRanges = splitRange(rangeIni,rangeEnd)
-
-                listForDF = []
-                # ESTO HAY QUE MEJORARLO ITER ROWS ES MALA IDEA PERO NO SE COMO HACERLO AHORA MISMO
-                for index, r in dfDateRanges.iterrows():
-                    listForDF.extend(newsExtract(benchmark,r['ini'],r['end'], all = True))
-                dfNewsPLN = pd.DataFrame(listForDF, columns=["title", "date", "desc", "link", "provider"])
-
-                # Make PLN of description
-                dfNewsPLN['polarity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.polarity)
-                dfNewsPLN['subjectivity'] = dfNewsPLN['desc'].apply(lambda x : TextBlob(x).sentiment.subjectivity)
-
-                # Drop useless columns
-                dfNewsPLN = dfNewsPLN.drop(columns=['title', 'desc', 'link', 'provider'])
-
-                # Do a mean of values
-                dfNewsPLN = dfNewsPLN.groupby('date', as_index = False).mean()
-
-                # Make date same type for left join
-                df['date'] = pd.to_datetime(df['date'])
-                dfNewsPLN['date'] = pd.to_datetime(dfNewsPLN['date'])
-
-                # Do left join
-                df = df.merge(dfNewsPLN, on=['date'], how="left")
-
-                # Fill nan values with latest values
-                df = df.ffill()
-
-                # Drop NaN values
-                df.dropna(subset=['polarity'], how='all', inplace=True)
+                df = newsPLNFitDF(df, benchmark, rangeIni, rangeEnd)
 
             # Scalate results
-            if scalate:
-                scaler = scalator(df,['date', 'polarity', 'subjectivity'])['adjclose']
+            if scalate:                
+                scaler = scalator(df,['date', 'polarity', 'subjectivity'])['adjclose'] # Save scaler of adjclose to inverse in future
 
             # Check if data can fit the lookup
             if(len(df) >= (lookup * 2)): #Half the data is lost as NaNs since there's no prediction possible for them, we need double the data
@@ -209,13 +180,22 @@ def createModel(request, sbl):
 
 def predict(request):
     if request.GET.get('action') == 'predict':
+        # Get GET data
         benchmark = request.GET.get('benchmark')
         idModel = request.GET.get('modelSelected')
+
+        # Get model from DB
         model = AiModel.objects.filter(id=idModel)
 
         # Extract data based on the lookup (we need last values, equal in number to lookup, more data is useless)
         df = get_dataYahoo(ticker = benchmark, dropTicker = True, period = 4, lookup = model[0].lookup)
+
+        # Add indicators if model needs them
         df = addIndicators(df, BB = model[0].BB)
+
+        # Add news if the model needs news
+        if model[0].news:
+            df = newsPLNFitDF(df, benchmark, df['date'].min(), df['date'].max())
 
         # Create result dataframe
         dfPred = df.iloc[-1:]
@@ -223,7 +203,8 @@ def predict(request):
         dfPred = dfPred.rename(columns={"date":"time"})
         dfPred = dfPred.rename(columns={"adjclose":"value"})
 
-        df = df.drop(columns=['date'])
+        # Erase useless columns
+        df = df.drop(columns=['date']) 
 
         # Scalate results        
         if model[0].scaled:
@@ -231,6 +212,7 @@ def predict(request):
             # Load scaler      
             scaler = load(open(str(model[0].scaler), 'rb'))
 
+        print(df)
         # Load model
         if(model[0].keras):
             loadedModel = load_model(str(model[0].model))  
@@ -240,6 +222,7 @@ def predict(request):
         # Predict and inverse result
         prediction = loadedModel.predict(df.iloc[-model[0].lookup:])
 
+        # Scale model if is required
         if model[0].scaled:
             if not model[0].keras:
                 prediction = np.array(prediction).reshape(len(prediction),1) # The size of the prediction must be shape [[1],[2]]
@@ -249,15 +232,17 @@ def predict(request):
         # Fix type
         dfPred['time'] = pd.to_datetime(dfPred['time'])
 
+        # Add to the pred dataframe the predictions with summed date values
         # https://stackoverflow.com/questions/72247655/extend-a-dataframe-with-values-and-next-dates/
         df1 = pd.DataFrame({'value': np.array(prediction).flatten(),
                             'time': pd.date_range(dfPred['time'].max(), periods=len(prediction)+1, 
                                                 freq='D', inclusive='right')})
-
         out = pd.concat([dfPred, df1], ignore_index=True)
 
+        # Fix for java
         out['time'] = out['time'] + pd.DateOffset(hours=12) # Java needs hours above the 00 to be able to detect it as a next day
 
+        # Make the data JSON
         prediction = out.to_dict(orient='records')
         data = {
             'prediction' : prediction,
