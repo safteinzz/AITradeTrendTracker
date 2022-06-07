@@ -1,9 +1,42 @@
 {% extends "base.html" %}
 
 {% block title %} 
-Markets
+Market
 {% endblock title %} 
 
 {% block content %}
-contenido markets
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 id="symbol" class="h2">Market</h1>
+</div>
+<table class="table table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Ticker</th>
+            <th scope="col">Name</th>
+            <th scope="col">Price</th>
+            <th scope="col">Change</th>
+            <th scope="col">% Change</th>
+            <th scope="col">Volume</th>
+            <th scope="col">Avg Vol (3 month)</th>
+            <th scope="col">Market Cap</th>
+            <th scope="col">PE Ratio (TTM)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ticker in most_active.itertuples %}
+            <tr>
+                <th scope="row"><a href="/markets/{{ticker.1}}">{{ticker.1}}</a></th>
+                <td>{{ticker.2}}</td>
+                <td>{{ticker.3}}</td>
+                <td>{{ticker.4}}</td>
+                <td>{{ticker.5}}</td>
+                <td>{{ticker.6}}</td>
+                <td>{{ticker.7}}</td>
+                <td>{{ticker.8}}</td>
+                <td>{{ticker.9}}</td>  
+            </tr>
+        
+        {% endfor %}
+    </tbody>
+</table>
 {% endblock content %}

@@ -172,15 +172,16 @@ def lWCFix(df):
     volumeData = volumeData.to_dict(orient='records')
     return candleData, volumeData
 
-def newsChecker(sbl):
-    dateToday = date.today()
-    dateDaysAgo = dateToday - pd.DateOffset(days=7)
-    news = New.objects.filter(ticker=sbl).filter(date__gt=dateDaysAgo)
-    if len(news) < 3:
-        listReturn = newsExtract(sbl, dateToday, dateDaysAgo, save = True)
-    else:
-        listReturn = New.objects.filter(ticker=sbl).order_by('-date')[:3][::-1] #https://stackoverflow.com/questions/20555673/django-query-get-last-n-records
-        # .filter(pk__gte=New.objects.count() - 3)
+def newsChecker(sbl, quant_news = 3):
+    listReturn = []
+    for symbol in sbl:
+        dateToday = date.today()
+        dateDaysAgo = dateToday - pd.DateOffset(days=7)
+        news = New.objects.filter(ticker=symbol).filter(date__gt=dateDaysAgo)
+        if len(news) < quant_news:
+            newsExtract(symbol, dateDaysAgo, dateToday, numberOfNews = quant_news, save = True)
+        list = New.objects.filter(ticker=symbol).order_by('-date')[:quant_news][::-1] #https://stackoverflow.com/questions/20555673/django-query-get-last-n-records
+        listReturn.extend(list) 
     return listReturn
 
 def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOfNews = 3, save = False):
@@ -198,35 +199,32 @@ def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOf
     Returns:
         list: list of news
     """    
+    listReturn = []
     iniRange = iniRange.strftime('%m-%d-%Y')
     endRange = endRange.strftime('%m-%d-%Y')
-
     googlenews = GoogleNews(start=iniRange,end=endRange, lang='en')
-
     googlenews.search(sbl)
-    listNews = googlenews.results()
-
-    listReturn = []
-    if all:
-        numberOfNews = len(listNews)
-        print(numberOfNews)
-    for index in range(numberOfNews):
-        urlParsed = urlparse(listNews[index]['link'])
-        provider = re.sub('www.', '',urlParsed.netloc)
-        provider = re.sub('\..*', '',provider)
-        # If we got no date, the new is pretty much useless
-        if listNews[index]['datetime']:
-            listReturn.append([listNews[index]['title'],listNews[index]['datetime'].date(),listNews[index]['desc'],listNews[index]['link'],provider])  
-    if save:
-        model_instances = [ New(
-            title = new[0],
-            date = new[1],
-            desc = new[2],
-            link = new[3],
-            provider = new[4],
-            ticker = sbl
-        ) for new in listReturn ]
-        New.objects.bulk_create(model_instances)
+    listNews = googlenews.results() #This can give HTTP Error 429: Too Many Requests if spammed
+    if listNews:        
+        if all:
+            numberOfNews = len(listNews)
+        for index in range(numberOfNews):
+            urlParsed = urlparse(listNews[index]['link'])
+            provider = re.sub('www.', '',urlParsed.netloc)
+            provider = re.sub('\..*', '',provider)
+            # If we got no date, the new is pretty much useless
+            if listNews[index]['datetime']:
+                listReturn.append([listNews[index]['title'],listNews[index]['datetime'].date(),listNews[index]['desc'],listNews[index]['link'],provider])  
+        if save:
+            model_instances = [ New(
+                title = new[0],
+                date = new[1],
+                desc = new[2],
+                link = new[3],
+                provider = new[4],
+                ticker = sbl
+            ) for new in listReturn ]
+            New.objects.bulk_create(model_instances)
     return listReturn
 
 def newsPLNFitDF(df, benchmark, rangeIni, rangeEnd):

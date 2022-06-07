@@ -29,11 +29,25 @@ import timeit
 
 # Create your views here.
 def home_view(request):
-    hello = 'hello world from the view'
-    return render(request, 'tradeapp/home.html', {'h':hello})
+    gainers = si.get_day_gainers(count=7)
+    losers = si.get_day_losers(count=7)
+    most_active = si.get_day_most_active(count=7)
+    
+    data = {
+        'gainers' : gainers,
+        'losers' : losers,
+        'most_active' : most_active
+    }
+
+    return render(request, 'tradeapp/home.html', data)
 
 def markets_view(request):
-    return render(request, 'tradeapp/markets.html', {})
+    most_active = si.get_day_most_active()
+    data = {
+        'most_active' : most_active
+    }
+
+    return render(request, 'tradeapp/markets.html', data)
 
 def symbol_view(request, sbl):
     # Extract data
@@ -50,7 +64,8 @@ def symbol_view(request, sbl):
         "Full"
     ]
 
-    latestNews = newsChecker(sbl)
+    latestNews = newsChecker([sbl])
+    print(latestNews)
     indicators = pd.DataFrame()
     indicators['full'] = ['Bollinger Bands', 'Double Exponential Moving Average', 'Relative Strength Index', 'Moving Average Convergence Divergence']
     indicators['acronym'] = ['BB', 'DEMA', 'RSI','MACD']
@@ -212,7 +227,6 @@ def predict(request):
             # Load scaler      
             scaler = load(open(str(model[0].scaler), 'rb'))
 
-        print(df)
         # Load model
         if(model[0].keras):
             loadedModel = load_model(str(model[0].model))  
