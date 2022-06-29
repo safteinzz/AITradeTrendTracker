@@ -179,6 +179,7 @@ def newsChecker(sbl, quant_news = 3):
         dateDaysAgo = dateToday - pd.DateOffset(days=7)
         news = New.objects.filter(ticker=symbol).filter(date__gt=dateDaysAgo)
         if len(news) < quant_news:
+            print('-------------------- DOWNLOADING NEWS')
             newsExtract(symbol, dateDaysAgo, dateToday, numberOfNews = quant_news, save = True)
         list = New.objects.filter(ticker=symbol).order_by('-date')[:quant_news][::-1] #https://stackoverflow.com/questions/20555673/django-query-get-last-n-records
         listReturn.extend(list) 

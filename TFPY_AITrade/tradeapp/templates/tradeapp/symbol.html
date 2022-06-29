@@ -109,7 +109,7 @@ Market {{sbl}}
 					{% endfor %}
 				</select>
 			</div>			
-			<div class="form-group pb-3">
+			{% comment %} <div class="form-group pb-3">
 
 				<input name="creationInputEnsembleCheck" id="creationInputEnsembleCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
 					data-bs-target="#collapseEnsemble" aria-expanded="false" aria-controls="collapseEnsemble" />
@@ -124,7 +124,7 @@ Market {{sbl}}
 					</select>
 				</div>
 
-			</div>
+			</div> {% endcomment %}
 			<div class="form-group pb-3">
 				<input name="creationInputNewsCheck" id="creationInputNewsCheck" class="form-check-input fs-5" type="checkbox" data-bs-toggle="collapse"
 					data-bs-target="#collapseNews" aria-expanded="false" aria-controls="collapseNews" />
@@ -359,16 +359,17 @@ $("#submitModelCreation").click(function (){
 	
 	
 	formData.append('rangeEnd',  $('#creationInputEndRange').val());
+	/*
 	if ($('#creationInputEnsembleCheck').is(':checked')){
 		formData.append('ensemble', $("#creationInputEnsemble option:selected").text());
 	}
+	*/
 	if ($('#creationInputNewsCheck').is(':checked')){
 		formData.append('news', 'True');
 		formData.append('blacklist', $('#creationInputNews').val());
 	}
 	formData.append('benchmark', $( "#creationInputBenchmark option:selected" ).text());
 	formData.append('algorithm', $( "#creationInputAlgorithm option:selected" ).index());
-	formData.append('ensemble', $( "#creationInputEnsemble option:selected" ).text());
 
 	if ($('#creationInputIndicatorBB').is(':checked')){
 		formData.append('BB', 'True');

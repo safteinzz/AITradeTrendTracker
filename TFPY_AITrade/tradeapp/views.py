@@ -8,7 +8,7 @@ from django.views.generic import ListView, DetailView
 from django.http import HttpResponseRedirect
 from django.http import HttpResponse
 from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, scalator, ml_launch, newsPLNFitDF
-from .models import AiModel
+from .models import AiModel, New
 from django.conf import settings
 
 
@@ -32,11 +32,19 @@ def home_view(request):
     gainers = si.get_day_gainers(count=7)
     losers = si.get_day_losers(count=7)
     most_active = si.get_day_most_active(count=7)
+
     
+    # Download latest news from db
+    latestNews = New.objects.order_by('-date')[:8][::-1]
+    # If there are no news stored get news from the most active symbol
+    if not latestNews:
+        latestNews = newsChecker(gainers['Symbol'][:1].tolist(), quant_news = 6) 
+
     data = {
         'gainers' : gainers,
         'losers' : losers,
-        'most_active' : most_active
+        'most_active' : most_active,
+        'latestNews' : latestNews
     }
 
     return render(request, 'tradeapp/home.html', data)
@@ -65,7 +73,6 @@ def symbol_view(request, sbl):
     ]
 
     latestNews = newsChecker([sbl])
-    print(latestNews)
     indicators = pd.DataFrame()
     indicators['full'] = ['Bollinger Bands', 'Double Exponential Moving Average', 'Relative Strength Index', 'Moving Average Convergence Divergence']
     indicators['acronym'] = ['BB', 'DEMA', 'RSI','MACD']
