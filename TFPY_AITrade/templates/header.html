@@ -4,7 +4,25 @@
         data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
     </button>
-    <input class="form-control form-control-dark w-100" type="search" placeholder="Search" aria-label="Search">
+    <input id="tags" class="form-control form-control-dark w-100" type="search" placeholder="Search" aria-label="Search">
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            $( function() {
+                var availableTags = [
+                    {% for ticker in tickers %}
+                        "{{ticker.symbol}}",
+                    {% endfor %}
+                ];
+                $( "#tags" ).autocomplete({
+                  source: availableTags,
+                  select: function(event, ui) {   
+                    location.href="/markets/" + ui.item.value;
+                }
+                });
+              } );
+           });       
+    </script>
+
     <div class="navbar-nav">
         <div class="nav-item text-nowrap">
             <a class="nav-link px-3" href="#">Sign out</a>

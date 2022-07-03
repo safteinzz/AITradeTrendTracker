@@ -9,21 +9,15 @@ from GoogleNews import GoogleNews
 from urllib.parse import urlparse
 import re
 from talib import BBANDS
-
-
 import os
 from math import sqrt
-
 from textblob import TextBlob
-
-
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import confusion_matrix, precision_score, recall_score, accuracy_score
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics import mean_squared_error 
-
 from .models import New
 
 def splitRange(rangeIni,rangeEnd):
@@ -206,7 +200,7 @@ def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOf
     googlenews = GoogleNews(start=iniRange,end=endRange, lang='en')
     googlenews.search(sbl)
     listNews = googlenews.results() #This can give HTTP Error 429: Too Many Requests if spammed
-    if listNews:        
+    if listNews:
         if all:
             numberOfNews = len(listNews)
         for index in range(numberOfNews):
@@ -297,7 +291,6 @@ def deep_learning_model_creation(X_Train, layers = 2, optimizer="rmsprop", units
     return model
 
 def ml_launch(df, lookup = 1, epochs = 100, batch_size = 32, type=0, shuffle = False): #https://www.youtube.com/watch?v=6_2hzRopPbQ
-
     # poner el lookout step como la cantidad de dias que se quiere mirar en el futuro, poner una linea y a tomar por culo    
     df = df.assign(future=df['adjclose'].shift(-lookup))
     df.dropna(subset=['future'], how='all', inplace=True)

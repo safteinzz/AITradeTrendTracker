@@ -8,7 +8,7 @@ from django.views.generic import ListView, DetailView
 from django.http import HttpResponseRedirect
 from django.http import HttpResponse
 from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, scalator, ml_launch, newsPLNFitDF
-from .models import AiModel, New
+from .models import AiModel, New, Ticker
 from django.conf import settings
 
 
@@ -29,6 +29,7 @@ import timeit
 
 # Create your views here.
 def home_view(request):
+    tickers = Ticker.objects.all()
     gainers = si.get_day_gainers(count=7)
     losers = si.get_day_losers(count=7)
     most_active = si.get_day_most_active(count=7)
@@ -41,6 +42,7 @@ def home_view(request):
         latestNews = newsChecker(gainers['Symbol'][:1].tolist(), quant_news = 6) 
 
     data = {
+        'tickers' : tickers,
         'gainers' : gainers,
         'losers' : losers,
         'most_active' : most_active,
@@ -50,14 +52,39 @@ def home_view(request):
     return render(request, 'tradeapp/home.html', data)
 
 def markets_view(request):
+    # tickerspool1 = si.tickers_sp500()
+    # tickerspool2 = si.tickers_nasdaq()
+    # tickerspool3 = si.tickers_dow()
+    # tickerspool4 = si.tickers_other()
+    # framesToApend = [tickerspool1, tickerspool2, tickerspool3]
+
+    # allTickers = pd.DataFrame()
+    # allTickers = []
+    # for df in framesToApend:
+    #     allTickers.extend(df)
+
+    # result = [] 
+    # [result.append(x) for x in allTickers if x not in result] 
+    #     allTickers = pd.concat([allTickers, df])
+    
+    # allTickers = allTickers.filter([:])
+
+    # for ti in result:
+    #     tick = Ticker(symbol=ti)
+    #     tick.save()
+
+
+    tickers = Ticker.objects.all()
     most_active = si.get_day_most_active()
     data = {
+        'tickers' : tickers,
         'most_active' : most_active
     }
 
     return render(request, 'tradeapp/markets.html', data)
 
 def symbol_view(request, sbl):
+    tickers = Ticker.objects.all()
     # Extract data
     tickerData = get_dataYahoo(sbl, scaled = False, dropTicker = True, period = 0)
 
@@ -83,6 +110,7 @@ def symbol_view(request, sbl):
     models = AiModel.objects.filter(ticker=sbl)
 
     data = {
+        'tickers' : tickers,
         'sbl' : sbl,
         'candleData' : candleData,
         'volumeData' : volumeData,
@@ -96,7 +124,7 @@ def symbol_view(request, sbl):
 
     return render(request, 'tradeapp/symbol.html', data)
 
-def answer(request):    
+def answer(request):
     sbl = request.GET.get('sbl')
     period = request.GET.get('period')
     actualSeletion = period
