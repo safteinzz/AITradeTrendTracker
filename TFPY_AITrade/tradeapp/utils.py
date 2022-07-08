@@ -171,7 +171,8 @@ def newsChecker(sbl, quant_news = 3):
     for symbol in sbl:
         dateToday = date.today()
         dateDaysAgo = dateToday - pd.DateOffset(days=7)
-        news = New.objects.filter(ticker=symbol).filter(date__gt=dateDaysAgo)
+        news = New.objects.filter(ticker=symbol).filter(date__gt=dateDaysAgo - pd.DateOffset(days=1)) #I need to put one day before, because of how the download works
+        # print(news, len(news))
         if len(news) < quant_news:
             print('-------------------- DOWNLOADING NEWS')
             newsExtract(symbol, dateDaysAgo, dateToday, numberOfNews = quant_news, save = True)
@@ -198,7 +199,8 @@ def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOf
     iniRange = iniRange.strftime('%m-%d-%Y')
     endRange = endRange.strftime('%m-%d-%Y')
     googlenews = GoogleNews(start=iniRange,end=endRange, lang='en')
-    googlenews.search(sbl)
+    searchParam = sbl + " stock"
+    googlenews.search(searchParam)
     listNews = googlenews.results() #This can give HTTP Error 429: Too Many Requests if spammed
     if listNews:
         if all:

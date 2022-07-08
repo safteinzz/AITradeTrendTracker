@@ -9,16 +9,18 @@ from .views import (
     # SymbolDetailView,
     answer, 
     createModel,
-    predict
+    predict,
+    exportPDF,
 )
 
 app_name = 'tradeapp'
 
 urlpatterns = [
-    path('', home_view, name='home'),
-    path('markets/', markets_view, name='markets'),
-    path('markets/<sbl>/', symbol_view, name='symbolWeek'), 
-    path('markets/<sbl>/create-model/',createModel, name='create-model'),    
-    path('ajax/dataSwap/', answer, name='get_response'),
+    path('',home_view, name='home'),
+    path('markets/',markets_view, name='markets'),
+    path('markets/<sbl>/',symbol_view, name='symbolWeek'),
+    path('markets/<sbl>/create-model/',createModel, name='create-model'),
+    path('markets/<sbl>/exportPDF',exportPDF, name='exportPDF'),
+    path('ajax/dataSwap/',answer, name='get_response'),
     path('ajax/prediction',predict, name='predict'),
 ]

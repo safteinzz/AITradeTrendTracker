@@ -19,10 +19,24 @@ Market {{sbl}}
 				Prediction
 			</button>
 		</div>
-		<div class="btn-group me-2">
-			<button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
-			<button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
-		</div>
+		
+			
+
+
+
+		<form id="exportPDFForm" action="exportPDF" method="POST">{% csrf_token %}
+			<input id="candleData" type="hidden" name="candleData" />
+			<input id="volumeData" type="hidden" name="volumeData" />
+			<input id="seriesData" type="hidden" name="seriesData" />
+			<div class="btn-group me-2">
+				<button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
+				<button id="exportPDFSubmit" class="btn btn-sm btn-outline-secondary">Export</button>
+			</div>
+		</form>
+
+
+
+		
 		<div class="dropdown">
 			<button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="actualSelectiondropdownMenuButton"
 				data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -214,7 +228,7 @@ Market {{sbl}}
 
 {% comment %} News block {% endcomment %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-	<h1 id="symbol" class="h2">Latest news</h1>
+	<h1 class="h2">Latest news</h1>
 </div>
 <div class="row">
 	{% for new in latestNews %}
@@ -264,7 +278,14 @@ https://www.youtube.com/watch?v=3KPW9VMyBHA
 https://tradingview.github.io/lightweight-charts/docs
 {% endcomment %}
 <script type="text/javascript">
+	var candleDataG;
+	var volumeDataG;
+
+	var seriesDataG; //Prediction data
+	
 	function chartSetter(chart, candleData, volumeData, candlestickSeries, volumeSeries) {
+		candleDataG = candleData;
+		volumeDataG = volumeData;
 		candlestickSeries.setData(candleData);
 		volumeSeries.setData(volumeData);		
 		chart.timeScale().fitContent();
@@ -435,6 +456,7 @@ $("#submitPrediction").click(function (){
         dataType: 'json',
         success: function (data){
 			console.log(data.prediction);
+			seriesDataG = data.prediction;
 			areaSeries.setData(data.prediction);			
 			chart.timeScale().fitContent();
 		},
@@ -443,6 +465,33 @@ $("#submitPrediction").click(function (){
 			console.log(xhr.status + ":" + xhr.responseText)
 		}
       });
+});
+
+{% comment %} $("#exportPDF").click(function (){
+	const endpoint = '/ajax/exportPDF';
+	$.ajax({
+		method: "GET",
+        url: endpoint,
+        data: {
+          'benchmark': 'test',
+		  'action': 'export'
+        },
+        dataType: 'json',
+        success: function (data){
+			console.log('done');
+		},
+		error: function(xhr, errmsg, err) {
+			alert('error during extraction, contact administrator')
+			console.log(xhr.status + ":" + xhr.responseText)
+		}
+      });
+}); {% endcomment %}
+
+$('#exportPDFSubmit').click(function (){
+	$('#candleData').val(JSON.stringify(candleDataG));
+	$('#volumeData').val(JSON.stringify(volumeDataG));
+	$('#seriesData').val(JSON.stringify(seriesDataG));	
+	$('#exportPDFForm').submit();
 });
 
 inputTags(document.querySelector('.inputCell'), [],[]);

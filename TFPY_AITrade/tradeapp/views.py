@@ -5,13 +5,15 @@ from django.http import JsonResponse
 from yahoo_fin import stock_info as si
 from django.shortcuts import render
 from django.views.generic import ListView, DetailView
-from django.http import HttpResponseRedirect
-from django.http import HttpResponse
+from django.http import HttpResponseRedirect, HttpResponse, FileResponse
 from .utils import get_dataYahoo, lWCFix, newsChecker, newsExtract, addIndicators, scalator, ml_launch, newsPLNFitDF
 from .models import AiModel, New, Ticker
 from django.conf import settings
 
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 
+import io
 
 import os
 from tensorflow.keras.models import load_model
@@ -22,6 +24,7 @@ import time
 
 import numpy as np
 import pandas as pd
+import mplfinance as mpf
 from datetime import datetime
 
 
@@ -52,6 +55,7 @@ def home_view(request):
     return render(request, 'tradeapp/home.html', data)
 
 def markets_view(request):
+
     # tickerspool1 = si.tickers_sp500()
     # tickerspool2 = si.tickers_nasdaq()
     # tickerspool3 = si.tickers_dow()
@@ -297,3 +301,44 @@ def predict(request):
             'prediction' : prediction,
         }
     return JsonResponse(data)
+
+def exportPDF(request, sbl):
+    # https://docs.djangoproject.com/en/4.0/howto/outputting-pdf/
+    # https://stackoverflow.com/questions/20762829/opening-pdf-file-generated-by-reportlab-in-django-using-ajax
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="'+ sbl +' extract.pdf"'
+
+    p = canvas.Canvas(response, bottomup=1)
+    # data = json.loads(request.body)
+
+    candleData = pd.DataFrame(json.loads(request.POST.get('candleData')), columns=['open','high','low','close','time'])
+    candleData['time'] = pd.to_datetime(pd.json_normalize(candleData['time']))
+    candleData = candleData.rename(columns={
+         "open":"Open",
+         "high":"High",
+         "low":"Low",
+         "close":"Close",
+         "time":"Date",
+    })
+    candleData = candleData.set_index('Date')
+
+    volumeData = pd.DataFrame(json.loads(request.POST.get('volumeData')), columns=['value','time'])
+    volumeData['time'] = pd.to_datetime(pd.json_normalize(volumeData['time']))
+    volumeData = volumeData.rename(columns={
+        "value":"Volume",
+        "time":"Date",
+    })
+    volumeData = volumeData.set_index('Date')
+
+    candleData = candleData.merge(volumeData, on=['Date'], how="left")
+    # https://github.com/matplotlib/mplfinance/blob/master/examples/savefig.ipynb
+    buf = io.BytesIO()
+    mpf.plot(candleData, type="candle", volume = True, savefig=buf)
+
+    graph = ImageReader(buf)
+    p.drawString(285, 780, sbl)
+    p.drawImage(graph, 0, 740, width=600, height=-350, mask='auto')
+    # p.drawString(100, 100, 'dataGet')
+    p.showPage()
+    p.save()
+    return response
