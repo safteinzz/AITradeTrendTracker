@@ -176,7 +176,10 @@ def createModel(request, sbl):
             DEMA = request.POST.get('DEMA')
             RSI = request.POST.get('RSI')
             MACD = request.POST.get('MACD')
-
+            if not request.POST.get('news'):
+                print('test-----------------------------------------------------------------------------')
+                news = False
+            print(news)
             # Get stock data
             df = get_dataYahoo(ticker = benchmark, dropTicker = True, rangeIni = rangeIni, rangeEnd = rangeEnd)
 
@@ -184,7 +187,7 @@ def createModel(request, sbl):
             df = addIndicators(df, BB = BB)
 
             # Add news if news
-            if (request.POST.get('news')):
+            if (news):
                 df = newsPLNFitDF(df, benchmark, rangeIni, rangeEnd)
 
             # Scalate results
@@ -219,6 +222,7 @@ def createModel(request, sbl):
                     model = modelPath,
                     scaler = scalerPath,
                     keras = keras,
+                    news = news,
                     scaled = scalate,
                     BB = BB,
                     DEMA = DEMA,
@@ -273,6 +277,7 @@ def predict(request):
             loadedModel = load(open(str(model[0].model), 'rb'))
 
         # Predict and inverse result
+        print(df.iloc[-model[0].lookup:])
         prediction = loadedModel.predict(df.iloc[-model[0].lookup:])
 
         # Scale model if is required

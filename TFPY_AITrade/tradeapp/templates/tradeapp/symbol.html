@@ -435,7 +435,7 @@ $("#submitModelCreation").click(function (){
 		contentType: false,
 		enctype: 'multipart/form-data',
         success: function (){
-			alert('success!')
+			console.log('success!')
 		},
 		error: function(xhr, errmsg, err) {
 			console.log(xhr.status + ":" + xhr.responseText)

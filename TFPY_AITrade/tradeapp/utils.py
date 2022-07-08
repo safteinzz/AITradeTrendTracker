@@ -195,6 +195,7 @@ def newsExtract(sbl, iniRange, endRange, provider = False, all = False, numberOf
     Returns:
         list: list of news
     """    
+    print('news extraction begin')
     listReturn = []
     iniRange = iniRange.strftime('%m-%d-%Y')
     endRange = endRange.strftime('%m-%d-%Y')
@@ -319,6 +320,11 @@ def ml_launch(df, lookup = 1, epochs = 100, batch_size = 32, type=0, shuffle = F
         params = {'n_neighbors':[2,3,4]}
         knn = KNeighborsRegressor(algorithm = 'auto', weights = 'distance')
         model = GridSearchCV(knn, params, cv=5)
+        print(X_Train)
+        print(Y_Train)
+        print(X_Test)
+        print(Y_Test)
+
         model.fit(
             X_Train,
             Y_Train
