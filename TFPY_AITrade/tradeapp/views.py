@@ -176,8 +176,9 @@ def createModel(request, sbl):
             DEMA = request.POST.get('DEMA')
             RSI = request.POST.get('RSI')
             MACD = request.POST.get('MACD')
-            if not request.POST.get('news'):
-                print('test-----------------------------------------------------------------------------')
+            if request.POST.get('news'):
+                news = True
+            else:
                 news = False
             print(news)
             # Get stock data

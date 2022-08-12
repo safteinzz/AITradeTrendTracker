@@ -3,7 +3,7 @@ aiohttp==3.8.1
 aiosignal==1.2.0
 alpha-vantage==2.3.1
 appdirs==1.4.4
-asgiref==3.5.0
+asgiref==3.5.2
 astunparse==1.6.3
 async-timeout==4.0.1
 attrs==21.2.0
@@ -18,7 +18,7 @@ colorama==0.4.4
 cssselect==1.1.0
 cycler==0.11.0
 dateparser==1.1.1
-Django==4.0.3
+Django==4.1
 dnspython==1.16.0
 fake-useragent==0.1.11
 feedfinder2==0.0.4
@@ -88,6 +88,7 @@ six==1.16.0
 sklearn==0.0
 soupsieve==2.3.1
 sqlparse==0.4.2
+style==1.1.0
 TA-Lib @ file:///C:/Users/SaFteiNZz/%21SaFt1Zz/GitHub/TFPY_AITRADE/TA_Lib-0.4.23-cp38-cp38-win_amd64.whl
 tensorboard==2.7.0
 tensorboard-data-server==0.6.1
@@ -104,6 +105,7 @@ tqdm==4.62.3
 typing-extensions==3.10.0.2
 tzdata==2021.5
 tzlocal==4.2
+update==0.0.1
 urllib3==1.26.7
 w3lib==1.22.0
 websockets==9.1
