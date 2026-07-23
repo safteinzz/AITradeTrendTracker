@@ -54,7 +54,7 @@ opt-einsum==3.3.0
 packaging==21.3
 pandas==1.4.2
 parse==1.19.0
-Pillow==9.2.0
+Pillow==12.3.0
 protobuf==3.19.1
 pyasn1==0.4.8
 pyasn1-modules==0.2.8
